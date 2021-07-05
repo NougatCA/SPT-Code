@@ -1,0 +1,159 @@
+import torch
+from torch.nn import CrossEntropyLoss, MSELoss
+
+from transformers import BartForConditionalGeneration, BartConfig
+from transformers.models.bart.modeling_bart import BartClassificationHead, shift_tokens_right
+from transformers.modeling_outputs import Seq2SeqLMOutput, Seq2SeqSequenceClassifierOutput
+
+
+class BartForClassificationAndGeneration(BartForConditionalGeneration):
+
+    def __init__(self, config: BartConfig):
+        super(BartForClassificationAndGeneration, self).__init__(config)
+
+        # classification head
+        self.classification_head = BartClassificationHead(
+            config.d_model,
+            config.d_model,
+            config.num_labels,
+            config.classifier_dropout,
+        )
+        self.model._init_weights(self.classification_head.dense)
+        self.model._init_weights(self.classification_head.out_proj)
+
+    def forward(
+            self,
+            input_ids=None,
+            attention_mask=None,
+            decoder_input_ids=None,
+            decoder_attention_mask=None,
+            head_mask=None,
+            decoder_head_mask=None,
+            cross_attn_head_mask=None,
+            encoder_outputs=None,
+            past_key_values=None,
+            inputs_embeds=None,
+            decoder_inputs_embeds=None,
+            labels=None,
+            use_cache=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
+            is_gen=False,
+            is_cls=False
+    ):
+        if not (is_gen ^ is_cls):
+            raise AssertionError('Arguments \'is_gen\' and \'is_cls\' cannot be True or False simultaneously')
+
+        if is_gen:
+            return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+            if labels is not None:
+                if decoder_input_ids is None:
+                    decoder_input_ids = shift_tokens_right(
+                        labels, self.config.pad_token_id, self.config.decoder_start_token_id
+                    )
+
+            outputs = self.model(
+                input_ids,
+                attention_mask=attention_mask,
+                decoder_input_ids=decoder_input_ids,
+                encoder_outputs=encoder_outputs,
+                decoder_attention_mask=decoder_attention_mask,
+                head_mask=head_mask,
+                decoder_head_mask=decoder_head_mask,
+                cross_attn_head_mask=cross_attn_head_mask,
+                past_key_values=past_key_values,
+                inputs_embeds=inputs_embeds,
+                decoder_inputs_embeds=decoder_inputs_embeds,
+                use_cache=use_cache,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict,
+            )
+            lm_logits = self.lm_head(outputs[0]) + self.final_logits_bias
+
+            masked_lm_loss = None
+            if labels is not None:
+                loss_fct = CrossEntropyLoss()
+                masked_lm_loss = loss_fct(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+
+            if not return_dict:
+                output = (lm_logits,) + outputs[1:]
+                return ((masked_lm_loss,) + output) if masked_lm_loss is not None else output
+
+            return Seq2SeqLMOutput(
+                loss=masked_lm_loss,
+                logits=lm_logits,
+                past_key_values=outputs.past_key_values,
+                decoder_hidden_states=outputs.decoder_hidden_states,
+                decoder_attentions=outputs.decoder_attentions,
+                cross_attentions=outputs.cross_attentions,
+                encoder_last_hidden_state=outputs.encoder_last_hidden_state,
+                encoder_hidden_states=outputs.encoder_hidden_states,
+                encoder_attentions=outputs.encoder_attentions,
+            )
+
+        elif is_cls:
+            return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+            if labels is not None:
+                use_cache = False
+
+            if input_ids is None and inputs_embeds is not None:
+                raise NotImplementedError(
+                    f"Passing input embeddings is currently not supported for {self.__class__.__name__}"
+                )
+
+            outputs = self.model(
+                input_ids,
+                attention_mask=attention_mask,
+                decoder_input_ids=decoder_input_ids,
+                decoder_attention_mask=decoder_attention_mask,
+                head_mask=head_mask,
+                decoder_head_mask=decoder_head_mask,
+                cross_attn_head_mask=cross_attn_head_mask,
+                encoder_outputs=encoder_outputs,
+                inputs_embeds=inputs_embeds,
+                decoder_inputs_embeds=decoder_inputs_embeds,
+                use_cache=use_cache,
+                output_attentions=output_attentions,
+                output_hidden_states=output_hidden_states,
+                return_dict=return_dict,
+            )
+            hidden_states = outputs[0]  # last hidden state
+
+            eos_mask = input_ids.eq(self.config.eos_token_id)
+
+            if len(torch.unique(eos_mask.sum(1))) > 1:
+                raise ValueError("All examples must have the same number of <eos> tokens.")
+            sentence_representation = hidden_states[eos_mask, :].view(hidden_states.size(0), -1,
+                                                                      hidden_states.size(-1))[
+                                      :, -1, :
+                                      ]
+            logits = self.classification_head(sentence_representation)
+
+            loss = None
+            if labels is not None:
+                if self.config.num_labels == 1:
+                    # regression
+                    loss_fct = MSELoss()
+                    loss = loss_fct(logits.view(-1), labels.view(-1))
+                else:
+                    loss_fct = CrossEntropyLoss()
+                    loss = loss_fct(logits.view(-1, self.config.num_labels), labels.view(-1))
+
+            if not return_dict:
+                output = (logits,) + outputs[1:]
+                return ((loss,) + output) if loss is not None else output
+
+            return Seq2SeqSequenceClassifierOutput(
+                loss=loss,
+                logits=logits,
+                past_key_values=outputs.past_key_values,
+                decoder_hidden_states=outputs.decoder_hidden_states,
+                decoder_attentions=outputs.decoder_attentions,
+                cross_attentions=outputs.cross_attentions,
+                encoder_last_hidden_state=outputs.encoder_last_hidden_state,
+                encoder_hidden_states=outputs.encoder_hidden_states,
+                encoder_attentions=outputs.encoder_attentions,
+            )
