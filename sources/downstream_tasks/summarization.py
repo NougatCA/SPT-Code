@@ -5,13 +5,13 @@ import logging
 from typing import Union, Tuple
 import os
 
-from models.bart import BartForClassificationAndGeneration
-from data.vocab import Vocab, load_vocab
-from data.dataset import CodeDataset
-from utils.general import count_params, human_format, layer_wise_parameters
-from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics
-from utils.callbacks import LogStateCallBack
-from utils.trainer import CodeTrainer
+from ..models.bart import BartForClassificationAndGeneration
+from ..data.vocab import Vocab, load_vocab
+from ..data.dataset import CodeDataset
+from ..utils.general import count_params, human_format, layer_wise_parameters
+from ..eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics
+from ..utils.callbacks import LogStateCallBack
+from ..utils.trainer import CodeTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +67,10 @@ def run_summarization(
             nl_vocab = load_vocab(vocab_root=trained_vocab, name=args.nl_vocab_name)
     else:
         logger.info('Building vocabularies')
-        code_vocab = Vocab(name=args.code_vocab_name, method='bpe', vocab_size=args.code_vocab_size,
+        code_vocab = Vocab(name=args.code_vocab_name, method=args.code_tokenize_method, vocab_size=args.code_vocab_size,
                            datasets=[datasets['train'].codes], ignore_case=True, save_root=args.vocab_root)
         ast_vocab = Vocab(name=args.ast_vocab_name, method='word', datasets=[datasets['train'].asts])
-        nl_vocab = Vocab(name='nl', method='bpe', vocab_size=args.nl_vocab_size,
+        nl_vocab = Vocab(name='nl', method=args.nl_tokenize_method, vocab_size=args.nl_vocab_size,
                          datasets=[datasets['train'].nls], ignore_case=True, save_root=args.vocab_root)
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
     logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')

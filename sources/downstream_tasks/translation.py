@@ -5,13 +5,13 @@ import logging
 from typing import Union, Tuple
 import os
 
-from models.bart import BartForClassificationAndGeneration
-from data.vocab import Vocab, load_vocab
-from data.dataset import CodeDataset
-from utils.general import count_params, human_format, layer_wise_parameters
-from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics
-from utils.callbacks import LogStateCallBack
-from utils.trainer import CodeTrainer
+from ..models.bart import BartForClassificationAndGeneration
+from ..data.vocab import Vocab, load_vocab
+from ..data.dataset import CodeDataset
+from ..utils.general import count_params, human_format, layer_wise_parameters
+from ..eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics
+from ..utils.callbacks import LogStateCallBack
+from ..utils.trainer import CodeTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +67,10 @@ def run_translation(
             nl_vocab = load_vocab(vocab_root=trained_vocab, name=args.nl_vocab_name)
     else:
         logger.info('Building vocabularies')
-        code_vocab = Vocab(name=args.code_vocab_name, method='bpe', vocab_size=args.code_vocab_size,
+        code_vocab = Vocab(name=args.code_vocab_name, method=args.code_tokenize_method, vocab_size=args.code_vocab_size,
                            datasets=[datasets['train'].codes], ignore_case=True, save_root=args.vocab_root)
         ast_vocab = Vocab(name=args.ast_vocab_name, method='word', datasets=[datasets['train'].asts])
-        nl_vocab = Vocab(name='nl', method='bpe', vocab_size=args.nl_vocab_size,
+        nl_vocab = Vocab(name='nl', method=args.nl_tokenize_method, vocab_size=args.nl_vocab_size,
                          datasets=[datasets['train'].nls], ignore_case=True, save_root=args.vocab_root)
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
     logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
@@ -129,8 +129,8 @@ def run_translation(
 
     def decode_preds(preds):
         preds, labels = preds
-        decoded_preds = nl_vocab.decode_batch(preds)
-        decoded_labels = nl_vocab.decode_batch(labels)
+        decoded_preds = code_vocab.decode_batch(preds)
+        decoded_labels = code_vocab.decode_batch(labels)
         return decoded_labels, decoded_preds
 
     # compute metrics
@@ -151,7 +151,7 @@ def run_translation(
         result.update(avg_ir_metrics(references=refs, candidates=cans))
         return result
 
-    training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, 'summarization'),
+    training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, 'translation'),
                                              overwrite_output_dir=True,
                                              do_train=True,
                                              do_eval=True,
@@ -167,7 +167,7 @@ def run_translation(
                                              num_train_epochs=args.n_epoch,
                                              lr_scheduler_type=SchedulerType.LINEAR,
                                              warmup_steps=args.warmup_steps,
-                                             logging_dir=os.path.join(args.tensor_board_root, 'summarization'),
+                                             logging_dir=os.path.join(args.tensor_board_root, 'translation'),
                                              logging_strategy=IntervalStrategy.STEPS,
                                              logging_steps=args.tensor_board_logging_steps,
                                              save_strategy=IntervalStrategy.EPOCH,
@@ -185,7 +185,7 @@ def run_translation(
                           code_vocab=code_vocab,
                           ast_vocab=ast_vocab,
                           nl_vocab=nl_vocab,
-                          task='summarization',
+                          task='translation',
                           model=model,
                           args=training_args,
                           data_collator=None,

@@ -5,9 +5,8 @@ import torch
 from typing import List
 import itertools
 
-from data.vocab import Vocab, transfer_vocab_index
-from data.data_utils import split_identifier
-from data.asts.ast_parser import get_single_ast
+from vocab import Vocab, transfer_vocab_index
+from asts.ast_parser import get_single_ast
 
 
 def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
