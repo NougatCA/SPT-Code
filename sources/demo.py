@@ -115,14 +115,17 @@
 
 
 import json
-from antlr4 import *
-from data.asts.antlr.java.Java8Lexer import Java8Lexer
-from data.asts.antlr.go.GoLexer import GoLexer
-# from data.asts.antlr.php.PhpLexer import PhpLexer
-from data.asts.antlr.ruby.CorundumLexer import CorundumLexer
-# from data.asts.antlr.python3.Python3Lexer import Python3Lexer
-# from data.asts.antlr.javascript.JavaScriptLexer import JavaScriptLexer
-# from data.asts.antlr.c_sharp.CSharpLexer import CSharpLexer
+import re
+
+from data.code_tokenizer.tokenizer import TokeNizer
+
+# map the language names between internal and ``code_tokenizer``
+CODE_TOKENIZER_MAPPING = {'python': TokeNizer('Python'),
+                          'java': TokeNizer('Java'),
+                          'javascript': TokeNizer('JavaScript'),
+                          'ruby': TokeNizer('Ruby'),
+                          'go': TokeNizer('Go'),
+                          'php': TokeNizer('PHP')}
 
 
 def get_source(lang):
@@ -135,10 +138,11 @@ def get_source(lang):
     return sources
 
 
+def trim_spaces(source):
+    return re.sub(r'\s+', ' ', source)
+
+
 sources = get_source('java')
 for source in sources:
-    inputs = InputStream(source)
-    lexer = Java8Lexer(inputs)
-    tokens = lexer.getAllTokens()
-    code = ' '.join([token.text.strip() for token in tokens])
-    print(code)
+    tokens = CODE_TOKENIZER_MAPPING['java'].getPureTokens(source)
+    print(trim_spaces(' '.join(tokens)))

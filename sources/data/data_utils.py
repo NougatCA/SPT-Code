@@ -1,15 +1,23 @@
-
 import re
 import json
 import os
 import logging
 import sctokenizer
+from code_tokenizer.tokenizer import TokeNizer
 
 from .asts.ast_parser import get_single_ast, get_single_ast_name
 
 logger = logging.getLogger(__name__)
 
 STRING_MATCHING_PATTERN = re.compile(r'([bruf]*)(\"\"\"|\'\'\'|\"|\')(?:(?!\2)(?:\\.|[^\\]))*\2')
+
+# map the language names between internal and ``code_tokenizer``
+CODE_TOKENIZER_MAPPING = {'python': TokeNizer('Python'),
+                          'java': TokeNizer('Java'),
+                          'javascript': TokeNizer('JavaScript'),
+                          'ruby': TokeNizer('Ruby'),
+                          'go': TokeNizer('Go'),
+                          'php': TokeNizer('PHP')}
 
 
 def camel_split(identifier):
@@ -76,7 +84,7 @@ def get_method_name(full_name):
         return full_name
 
 
-def replace_string(source):
+def replace_string_literal(source):
     """
     Replace the string literal in source code with ``<STR>``.
 
@@ -112,7 +120,7 @@ def parse_json_file(file):
             data = json.loads(line.strip())
             name = get_method_name(data['func_name'])
             source = data['code']
-            code = replace_string(' '.join(data['code_tokens']))
+            code = replace_string_literal(' '.join(data['code_tokens']))
 
             sources.append(source)
             codes.append(code)
@@ -207,6 +215,19 @@ def load_dataset_from_dir(dataset_dir):
     return languages, lang_lines, all_sources, all_codes, all_asts, all_names
 
 
+def trim_spaces(string):
+    """
+    Replace consecutive spaces with a single whitespace.
+
+    Args:
+        string (str): String
+
+    Returns:
+        - str: Replaced string
+    """
+    return re.sub(r'\s+', ' ', string)
+
+
 def tokenize_source(source, language):
     """
     Tokenize the source code into tokens
@@ -218,13 +239,18 @@ def tokenize_source(source, language):
         str: Tokenized code, delimited by whitespace, string literal will be replaced by ``___STR``
 
     """
-    if language in ['c', 'cpp', 'java', 'python', 'php']:
+    if language in ['python', 'java', 'javascript', 'ruby', 'go', 'php']:
+        tokenizer = CODE_TOKENIZER_MAPPING[language]
+        tokens = tokenizer.getPureTokens(source)
+        code = replace_string_literal(' '.join(tokens))
+        return trim_spaces(code)
+    elif language in ['c', 'cpp', 'java', 'python', 'php']:
         tokens = sctokenizer.tokenize_str(source_str=source, lang=language)
-        code = ' '.join(' '.join([token.token_value for token in tokens]))
-        return replace_string(code)
-    # c#, go, js, ruby
+        code = replace_string_literal(' '.join([token.token_value for token in tokens]))
+        return trim_spaces(code)
+    # c#
     else:
-        return source
+        return source[:]
 
 
 def parse_for_summarization(source_path, code_path, nl_path, language):
