@@ -4,6 +4,7 @@ import os
 import random
 import logging
 
+import vars
 from .data_utils import load_dataset_from_dir, load_lines, parse_for_summarization, parse_for_translation
 
 logger = logging.getLogger(__name__)
@@ -35,14 +36,14 @@ class CodeDataset(Dataset):
         # load pre-training dataset
         if self.mode == 'pre_train':
             self.languages, self.lang_n_line, self.sources, self.codes, self.asts, self.names = load_dataset_from_dir(
-                dataset_dir=self.dataset_dir)
+                dataset_dir=self.dataset_dir, replace_method_name=self.task == vars.METHOD_NAME_PREDICTION_TASK)
             self.size = len(self.codes)
         # load fine-tuning dataset
         else:
             assert split
             self.dataset_dir = os.path.join(self.dataset_dir, task)
             # code summarization
-            if task == 'summarization':
+            if task == vars.SUMMARIZATION_TASK:
                 assert language, '\'Language\' must be specific if downstream task is code summarization'
                 self.dataset_dir = os.path.join(self.dataset_dir, language, split)
 
@@ -53,12 +54,12 @@ class CodeDataset(Dataset):
                 self.codes, self.asts, self.names, self.nls = parse_for_summarization(source_path=self.source_path,
                                                                                       code_path=self.code_path,
                                                                                       nl_path=self.nl_path,
-                                                                                      language=language)
+                                                                                      lang=language)
 
                 assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
                 self.size = len(self.codes)
             # code translation
-            elif task == 'translation':
+            elif task == vars.TRANSLATION_TASK:
                 java_path = f'{split}.java-cs.txt.java'
                 c_sharp_path = f'{split}.java-cs.txt.cs'
                 if args.translation_source_language == args.translation_target_language:
@@ -77,12 +78,12 @@ class CodeDataset(Dataset):
                 assert len(self.codes) == len(self.asts) == len(self.names) == len(self.targets)
                 self.size = len(self.codes)
 
-            elif task == 'search':
+            elif task == vars.SEARCH_TASK:
                 pass
 
     def __getitem__(self, index):
-
-        if self.task == 'cap':
+        # cap
+        if self.task == vars.CODE_AST_PREDICTION_TASK:
             is_ast = random.random() < 0.5
             if is_ast:
                 return self.codes[index], self.asts[index], self.names[index], 1
@@ -91,20 +92,20 @@ class CodeDataset(Dataset):
                 while other_ast == self.asts[index]:
                     other_ast = self.asts[random.randint(0, self.size - 1)]
                 return self.codes[index], other_ast, self.names[index], 0
-
-        elif self.task == 'ncp':
+        # ncp
+        elif self.task == vars.NEXT_CODE_PREDICTION_TASK:
             return self.languages[index], self.sources[index], self.names[index]
-
-        elif self.task == 'mnp':
+        # mnp
+        elif self.task == vars.METHOD_NAME_PREDICTION_TASK:
             return self.codes[index], self.asts[index], self.names[index]
-
-        elif self.task == 'summarization':
+        # summarization
+        elif self.task == vars.SUMMARIZATION_TASK:
             return self.codes[index], self.asts[index], self.names[index], self.nls[index]
-
-        elif self.task == 'translation':
+        # translation
+        elif self.task == vars.TRANSLATION_TASK:
             return self.codes[index], self.asts[index], self.names[index], self.targets[index]
-
-        elif self.task == 'search':
+        # search
+        elif self.task == vars.SEARCH_TASK:
             pass
 
     def __len__(self):

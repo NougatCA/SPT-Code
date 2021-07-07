@@ -4,6 +4,7 @@ from transformers import BartModel, BartForConditionalGeneration, BartConfig, Se
 import logging
 import os
 
+import vars
 from data.dataset import CodeDataset
 from data.vocab import Vocab
 from utils.general import count_params, human_format, layer_wise_parameters
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 def pre_train(args, tasks=None):
 
     if tasks is None:
-        tasks = ['mnp']
+        tasks = [vars.METHOD_NAME_PREDICTION_TASK]
 
     logger.info('*' * 100)
     logger.info('Initializing pre-training environments')
@@ -37,15 +38,15 @@ def pre_train(args, tasks=None):
     logger.info('-' * 100)
     logger.info('Building vocabularies')
     # code vocab
-    code_vocab = Vocab(name='code', method=args.code_tokenize_method, vocab_size=args.code_vocab_size,
+    code_vocab = Vocab(name=args.code_vocab_name, method=args.code_tokenize_method, vocab_size=args.code_vocab_size,
                        datasets=[dataset.codes], ignore_case=True, save_root=args.vocab_root)
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
     # ast vocab
-    ast_vocab = Vocab(name='ast', method='word', datasets=[dataset.asts],
+    ast_vocab = Vocab(name=args.ast_vocab_name, method='word', datasets=[dataset.asts],
                       ignore_case=True, save_root=args.vocab_root)
     logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
     # nl vocab
-    nl_vocab = Vocab(name='nl', method=args.nl_tokenize_method, vocab_size=args.nl_vocab_size,
+    nl_vocab = Vocab(name=args.nl_vocab_name, method=args.nl_tokenize_method, vocab_size=args.nl_vocab_size,
                      datasets=[dataset.names],
                      ignore_case=True, save_root=args.vocab_root)
     logger.info(f'The size of nl vocabulary: {len(nl_vocab)}')
@@ -95,7 +96,7 @@ def pre_train(args, tasks=None):
 
         dataset.set_task(task)
 
-        if task == 'cap':
+        if task == vars.CODE_AST_PREDICTION_TASK:
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -149,7 +150,7 @@ def pre_train(args, tasks=None):
             logger.info(f'Pre-training task CAP finished')
             trainer.save_model(os.path.join(args.model_root, 'cap'))
 
-        elif task == 'ncp':
+        elif task == vars.NEXT_CODE_PREDICTION_TASK:
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -203,7 +204,7 @@ def pre_train(args, tasks=None):
             logger.info('Pre-training task NCP finished')
             trainer.save_model(os.path.join(args.model_root, 'ncp'))
 
-        elif task == 'mnp':
+        elif task == vars.METHOD_NAME_PREDICTION_TASK:
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------

@@ -6,18 +6,19 @@ import sctokenizer
 from code_tokenizer.tokenizer import TokeNizer
 
 from .asts.ast_parser import get_single_ast, get_single_ast_name
+import vars
 
 logger = logging.getLogger(__name__)
 
 STRING_MATCHING_PATTERN = re.compile(r'([bruf]*)(\"\"\"|\'\'\'|\"|\')(?:(?!\2)(?:\\.|[^\\]))*\2')
 
 # map the language names between internal and ``code_tokenizer``
-CODE_TOKENIZER_MAPPING = {'python': TokeNizer('Python'),
-                          'java': TokeNizer('Java'),
-                          'javascript': TokeNizer('JavaScript'),
-                          'ruby': TokeNizer('Ruby'),
-                          'go': TokeNizer('Go'),
-                          'php': TokeNizer('PHP')}
+CODE_TOKENIZER_MAPPING = {vars.PYTHON_LANG: TokeNizer('Python'),
+                          vars.JAVA_LANG: TokeNizer('Java'),
+                          vars.JAVASCRIPT_LANG: TokeNizer('JavaScript'),
+                          vars.RUBY_LANG: TokeNizer('Ruby'),
+                          vars.GO_LANG: TokeNizer('Go'),
+                          vars.PHP_LANG: TokeNizer('PHP')}
 
 
 def camel_split(identifier):
@@ -98,12 +99,13 @@ def replace_string_literal(source):
     return re.sub(pattern=STRING_MATCHING_PATTERN, repl='___STR', string=source)
 
 
-def parse_json_file(file):
+def parse_json_file(file, replace_method_name=False):
     """
     Parse a dataset file where each line is a json string representing a sample.
 
     Args:
         file (str): The file path
+        replace_method_name (bool): Whether to replace method names in codes, default to False
 
     Returns:
         (list[str], list[str], list[str]):
@@ -121,6 +123,8 @@ def parse_json_file(file):
             name = get_method_name(data['func_name'])
             source = data['code']
             code = replace_string_literal(' '.join(data['code_tokens']))
+            if replace_method_name:
+                code = code.replace(name, 'f', 1)
 
             sources.append(source)
             codes.append(code)
@@ -135,25 +139,26 @@ def find_all_files(base):
             yield os.path.join(root, f)
 
 
-def get_pre_train_dataset_files(lang_dir, language):
-    # if language in ['go', 'java', 'python', 'javascript', 'php', 'ruby']:
-    if language in ['java']:
+def get_pre_train_dataset_files(lang_dir, lang):
+    # if lang in ['go', 'java', 'python', 'javascript', 'php', 'ruby']:
+    if lang in [vars.JAVA_LANG]:
         return [file for file in find_all_files(base=lang_dir) if file.endswith('.jsonl')]
     return None
 
 
-def get_pre_train_dataset(file, language):
-    if language in ['go', 'java', 'python', 'javascript', 'php', 'ruby']:
-        sources, codes, names = parse_json_file(file)
+def get_pre_train_dataset(file, lang, replace_method_name=False):
+    if lang in [vars.JAVA_LANG, vars.PYTHON_LANG, vars.GO_LANG, vars.JAVASCRIPT_LANG, vars.PHP_LANG, vars.RUBY_LANG]:
+        sources, codes, names = parse_json_file(file, replace_method_name)
         return sources, codes, names
 
 
-def load_dataset_from_dir(dataset_dir):
+def load_dataset_from_dir(dataset_dir, replace_method_name=False):
     """
     Load all files in the given dir
 
     Args:
         dataset_dir (str): Root directory
+        replace_method_name (bool): Whether to replace method names in ``all_codes``, default to False
 
     Returns:
         (list[str], dict[str, int], list[str], list[str], List[str], list[str]):
@@ -178,12 +183,14 @@ def load_dataset_from_dir(dataset_dir):
             continue
 
         lang = file
-        dataset_files = get_pre_train_dataset_files(path, language=lang)
+        dataset_files = get_pre_train_dataset_files(path, lang=lang)
         if dataset_files and len(dataset_files) > 0:
             logger.info(f'Loading {lang} dataset')
             n_sample = 0
             for dataset_file_path in dataset_files:
-                sources, codes, names = get_pre_train_dataset(file=dataset_file_path, language=lang)
+                sources, codes, names = get_pre_train_dataset(file=dataset_file_path,
+                                                              lang=lang,
+                                                              replace_method_name=replace_method_name)
 
                 new_sources = []
                 new_codes = []
@@ -228,24 +235,24 @@ def trim_spaces(string):
     return re.sub(r'\s+', ' ', string)
 
 
-def tokenize_source(source, language):
+def tokenize_source(source, lang):
     """
     Tokenize the source code into tokens
     Args:
         source (str): Source in string
-        language (str): Language of source code
+        lang (str): Language of source code
 
     Returns:
         str: Tokenized code, delimited by whitespace, string literal will be replaced by ``___STR``
 
     """
-    if language in ['python', 'java', 'javascript', 'ruby', 'go', 'php']:
-        tokenizer = CODE_TOKENIZER_MAPPING[language]
+    if lang in [vars.PYTHON_LANG, vars.JAVA_LANG, vars.JAVASCRIPT_LANG, vars.RUBY_LANG, vars.GO_LANG, vars.PHP_LANG]:
+        tokenizer = CODE_TOKENIZER_MAPPING[lang]
         tokens = tokenizer.getPureTokens(source)
         code = replace_string_literal(' '.join(tokens))
         return trim_spaces(code)
-    elif language in ['c', 'cpp', 'java', 'python', 'php']:
-        tokens = sctokenizer.tokenize_str(source_str=source, lang=language)
+    elif lang in ['c', 'cpp', vars.JAVA_LANG, vars.PYTHON_LANG, vars.PHP_LANG]:
+        tokens = sctokenizer.tokenize_str(source_str=source, lang=lang)
         code = replace_string_literal(' '.join([token.token_value for token in tokens]))
         return trim_spaces(code)
     # c#
@@ -254,11 +261,11 @@ def tokenize_source(source, language):
         return source[:]
 
 
-def parse_for_summarization(source_path, code_path, nl_path, language):
+def parse_for_summarization(source_path, code_path, nl_path, lang):
     sources = load_lines(source_path)
 
     if not os.path.isfile(code_path):
-        codes = [tokenize_source(source, language=language) for source in sources]
+        codes = [tokenize_source(source, lang=lang) for source in sources]
     else:
         codes = load_lines(code_path)
     nls = load_lines(nl_path)
@@ -270,7 +277,7 @@ def parse_for_summarization(source_path, code_path, nl_path, language):
     asts = []
     for source, code, nl in zip(sources, codes, nls):
         try:
-            ast, name = get_single_ast_name(language=language, source=source)
+            ast, name = get_single_ast_name(language=lang, source=source)
             new_codes.append(code)
             new_nls.append(nl)
             names.append(' '.join(split_identifier(name)))
@@ -292,8 +299,8 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
     for source, target in zip(sources, targets):
         try:
             ast, name = get_single_ast_name(language=source_lang, source=source)
-            code = tokenize_source(source=source, language=source_lang)
-            tokenized_target = tokenize_source(source=target, language=target_lang)
+            code = tokenize_source(source=source, lang=source_lang)
+            tokenized_target = tokenize_source(source=target, lang=target_lang)
 
             new_sources.append(code)
             asts.append(ast)

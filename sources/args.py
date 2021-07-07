@@ -171,6 +171,11 @@ class PreprocessingArguments:
         metadata={'help': 'Name of the code vocab'}
     )
 
+    ast_vocab_name: str = field(
+        default='ast',
+        metadata={'help': 'Name of the ast vocab'}
+    )
+
     nl_vocab_name: str = field(
         default='nl',
         metadata={'help': 'Name of the nl vocab'}
@@ -305,6 +310,11 @@ class TaskArguments:
         default='c_sharp',
         metadata={'help': 'Target language of the code translation',
                   'choices': ['java', 'c_sharp']}
+    )
+
+    search_language: str = field(
+        default='java',
+        metadata={'help': 'Language of the source code in code search, also the directory of the dataset dir'}
     )
 
 
