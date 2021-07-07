@@ -3,20 +3,36 @@ from tree_sitter import Language, Parser
 import os
 
 
-LANGUAGE = {'go': Language('data/asts/build/my-languages.so', 'go'),
-            'javascript': Language('data/asts/build/my-languages.so', 'javascript'),
-            'python': Language('data/asts/build/my-languages.so', 'python'),
-            'java': Language('data/asts/build/my-languages.so', 'java'),
-            'php': Language('data/asts/build/my-languages.so', 'php'),
-            'ruby': Language('data/asts/build/my-languages.so', 'ruby'),
-            'c-sharp': Language('data/asts/build/my-languages.so', 'c_sharp')}
+LANGUAGE = {'go': Language('build/my-languages.so', 'go'),
+            'javascript': Language('build/my-languages.so', 'javascript'),
+            'python': Language('build/my-languages.so', 'python'),
+            'java': Language('build/my-languages.so', 'java'),
+            'php': Language('build/my-languages.so', 'php'),
+            'ruby': Language('build/my-languages.so', 'ruby'),
+            'c-sharp': Language('build/my-languages.so', 'c_sharp')}
 parser = Parser()
 
-query_string = """
+method_name_query_string = """
 (program
   (local_variable_declaration
     (variable_declarator
       (identifier) @method_name)))
+"""
+
+method_invocation_query_string = """
+(method_invocation
+  [
+    (
+        (*)
+        .
+        (identifier) @method_invocation
+    )
+    
+    (
+        (identifier) @method_invocation
+    )
+  ]
+)
 """
 
 ELIMINATE_AST_NODE = ['(', ')', '{', '}', ';']
@@ -39,36 +55,36 @@ def parse_ast(code, language=None):
     return tree
 
 
-# def get_paths(root: tree_sitter.Node):
-#
-#     node_stack = []
-#     path_stack = []
-#     result = []
-#
-#     node_stack.append(root)
-#     init_path = [root]
-#     path_stack.append(init_path)
-#
-#     while node_stack:
-#         cur_node = node_stack.pop()
-#         cur_path = path_stack.pop()
-#
-#         if len(cur_node.children) <= 0:
-#             result.append(cur_path)
-#
-#         else:
-#             num_children = len(cur_node.children)
-#             for i in range(num_children - 1, -1, -1):
-#                 child = cur_node.children[i]
-#                 node_stack.append(child)
-#                 new_path = cur_path[:]
-#                 new_path.append(child)
-#                 path_stack.append(new_path)
-#
-#     return result
+def get_paths(root: tree_sitter.Node):
+
+    node_stack = []
+    path_stack = []
+    result = []
+
+    node_stack.append(root)
+    init_path = [root]
+    path_stack.append(init_path)
+
+    while node_stack:
+        cur_node = node_stack.pop()
+        cur_path = path_stack.pop()
+
+        if len(cur_node.children) <= 0:
+            result.append(cur_path)
+
+        else:
+            num_children = len(cur_node.children)
+            for i in range(num_children - 1, -1, -1):
+                child = cur_node.children[i]
+                node_stack.append(child)
+                new_path = cur_path[:]
+                new_path.append(child)
+                path_stack.append(new_path)
+
+    return result
 
 
-def get_leaf_name(source, node):
+def get_node_name(source, node):
     if node.is_named:
         return source[node.start_byte: node.end_byte]
     return ''
@@ -77,15 +93,15 @@ def get_leaf_name(source, node):
 def get_method_name(source, language, node):
     if node.type != 'program':
         return ''
-    query = LANGUAGE[language].query(query_string)
+    query = LANGUAGE[language].query(method_name_query_string)
     captures = query.captures(node)
-    return get_leaf_name(source, captures[0][0])
+    return get_node_name(source, captures[0][0])
 
 
 def get_xsbt(source, node):
     xsbt = []
     if len(node.children) == 0:
-        if get_leaf_name(source, node) not in ELIMINATE_AST_NODE and \
+        if get_node_name(source, node) not in ELIMINATE_AST_NODE and \
            node.type not in ELIMINATE_AST_NODE:
             xsbt.append(node.type)
     else:
@@ -121,6 +137,7 @@ def get_statement_xsbt(node):
 
 
 def get_ast_name(languages, code_lines):
+    # TODO: add api sequence as nl
     assert len(languages) == len(code_lines)
     langs = []
     asts = []
@@ -154,12 +171,18 @@ def get_single_ast_name(language, source):
     return ast, name
 
 
-# source = '@Override public boolean isTraceEnabled(){ return logger.isLoggable(Level.FINEST); }'
-# tree = parse_ast(source, language='java')
-#
-# paths = get_paths(tree.root_node)
-# for path in paths:
-#     print(' '.join([node.type for node in path] + [get_leaf_name(source, path[-1])]))
-#
-# print(get_method_name(source, language='java', node=tree.root_node))
-# print(' '.join(get_xsbt(source, tree.root_node)))
+def get_method_invocation(root, source, lang):
+    query = LANGUAGE[lang].query(method_invocation_query_string)
+    captures = query.captures(root)
+    return [get_node_name(source=source, node=capture[0]) for capture in captures]
+
+
+source = '@CanIgnoreReturnValue\n  public static <T> boolean removeIf(Iterator<T> removeFrom, Predicate<? super T> predicate) {\n    checkNotNull(predicate);\n    boolean modified = false;\n    while (removeFrom.hasNext()) {\n      if (predicate.apply(removeFrom.next())) {\n        removeFrom.remove();\n        modified = true;\n      }\n    }\n    return modified;\n  }'
+tree = parse_ast(source, language='java')
+
+paths = get_paths(tree.root_node)
+for path in paths:
+    print(' '.join([node.type for node in path] + [get_node_name(source, path[-1])]))
+
+print(get_method_name(source, language='java', node=tree.root_node))
+print(get_method_invocation(tree.root_node, source, 'java'))
