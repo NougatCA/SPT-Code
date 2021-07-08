@@ -66,7 +66,7 @@ def load_lines(path):
     return lines
 
 
-def get_method_name(full_name):
+def trim_method_name(full_name):
     """
     Extract method/function name from its full name,
     e.g., RpcResponseResolver.resolveResponseObject -> resolveResponseObject
@@ -120,7 +120,7 @@ def parse_json_file(file, replace_method_name=False):
     with open(file, encoding='utf-8') as f:
         for line in f.readlines():
             data = json.loads(line.strip())
-            name = get_method_name(data['func_name'])
+            name = trim_method_name(data['func_name'])
             source = data['code']
             code = replace_string_literal(' '.join(data['code_tokens']))
             if replace_method_name:
@@ -198,7 +198,7 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
                 asts = []
                 for source, code, name in zip(sources, codes, names):
                     try:
-                        ast = get_single_ast(language=lang, source=source)
+                        ast = get_single_ast(lang=lang, source=source)
                         new_sources.append(source)
                         new_codes.append(code)
                         new_names.append(name)
@@ -277,7 +277,7 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
     asts = []
     for source, code, nl in zip(sources, codes, nls):
         try:
-            ast, name = get_single_ast_name(language=lang, source=source)
+            ast, name = get_single_ast_name(lang=lang, source=source)
             new_codes.append(code)
             new_nls.append(nl)
             names.append(' '.join(split_identifier(name)))
@@ -298,7 +298,7 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
     names = []
     for source, target in zip(sources, targets):
         try:
-            ast, name = get_single_ast_name(language=source_lang, source=source)
+            ast, name = get_single_ast_name(lang=source_lang, source=source)
             code = tokenize_source(source=source, lang=source_lang)
             tokenized_target = tokenize_source(source=target, lang=target_lang)
 

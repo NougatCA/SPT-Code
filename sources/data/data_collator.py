@@ -62,7 +62,7 @@ def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
             former_code = code[: pos]
             latter_code = code[pos:]
 
-            former_ast = get_single_ast(language=lang, source=former_code)
+            former_ast = get_single_ast(lang=lang, source=former_code)
 
             former_codes.append(former_code)
             latter_codes.append(latter_code)
