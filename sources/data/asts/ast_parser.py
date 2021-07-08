@@ -341,7 +341,7 @@ def extract_method_invocation(source, root, lang):
     return [get_node_name(source=source, node=capture[0], lang=lang) for capture in captures]
 
 
-def extract_nl_from_code(source, root, lang):
+def extract_nl_from_code(source, root, lang, name=None):
     """
     Extract nl tokens from given source code, including split name and method invocations.
 
@@ -349,6 +349,7 @@ def extract_nl_from_code(source, root, lang):
         source (str): Source code string
         root (tree_sitter.Node): Root of code
         lang (str): Source code language
+        name (str): optional, name of method/function
 
     Returns:
         str: Nl string
@@ -356,7 +357,8 @@ def extract_nl_from_code(source, root, lang):
     """
     tokens = []
 
-    name = get_method_name(source=source, root=root, lang=lang)
+    if name is None:
+        name = get_method_name(source=source, root=root, lang=lang)
     name_tokens = split_identifier(name)
     tokens += name_tokens
 
@@ -368,13 +370,14 @@ def extract_nl_from_code(source, root, lang):
     return ' '.join(tokens)
 
 
-def generate_single_ast_nl(source, lang):
+def generate_single_ast_nl(source, lang, name=None):
     """
     Generate AST sequence and nl sequence for a single source code sample.
 
     Args:
         source (str): Source code string
         lang (str): Source code language
+        name (str): optional, name of method/function
 
     Returns:
         (str, str):
@@ -384,7 +387,7 @@ def generate_single_ast_nl(source, lang):
     """
     tree = parse_ast(source=source, lang=lang)
     ast = generate_statement_xsbt(node=tree.root_node, lang=lang)
-    nl = extract_nl_from_code(source=source, root=tree.root_node, lang=lang)
+    nl = extract_nl_from_code(source=source, root=tree.root_node, lang=lang, name=name)
     return ast, nl
 
 

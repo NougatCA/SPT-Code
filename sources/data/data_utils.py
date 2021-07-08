@@ -5,7 +5,7 @@ import logging
 import sctokenizer
 from code_tokenizer.tokenizer import TokeNizer
 
-from .asts.ast_parser import
+from .asts.ast_parser import generate_single_ast_nl
 import vars
 
 logger = logging.getLogger(__name__)
@@ -198,7 +198,7 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
                 asts = []
                 for source, code, name in zip(sources, codes, names):
                     try:
-                        ast = get_single_ast(lang=lang, source=source)
+                        ast, nl = generate_single_ast_nl(source=source, lang=lang, name=name)
                         new_sources.append(source)
                         new_codes.append(code)
                         new_names.append(name)
@@ -277,10 +277,10 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
     asts = []
     for source, code, nl in zip(sources, codes, nls):
         try:
-            ast, name = get_single_ast_name(lang=lang, source=source)
+            ast, name = generate_single_ast_nl(source=source, lang=lang)
             new_codes.append(code)
             new_nls.append(nl)
-            names.append(' '.join(split_identifier(name)))
+            names.append(name)
             asts.append(ast)
         except Exception:
             continue
@@ -298,13 +298,13 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
     names = []
     for source, target in zip(sources, targets):
         try:
-            ast, name = get_single_ast_name(lang=source_lang, source=source)
+            ast, name = generate_single_ast_nl(source=source, lang=source_lang)
             code = tokenize_source(source=source, lang=source_lang)
             tokenized_target = tokenize_source(source=target, lang=target_lang)
 
             new_sources.append(code)
             asts.append(ast)
-            names.append(' '.join(split_identifier(name)))
+            names.append(name)
             new_targets.append(tokenized_target)
         except Exception:
             continue
