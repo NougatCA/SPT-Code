@@ -389,6 +389,21 @@ def generate_single_ast_nl(source, lang):
 
 
 def generate_asts_nls(sources, langs):
+    """
+    Generate AST sequence and nl sequence for a list of source code samples, exceptions will be eliminate.
+
+    Args:
+        sources (str): List of source code strings
+        langs (str): List of source code languages
+
+    Returns:
+        (list[str], list[str], list[str], list[str]):
+            - List of language strings
+            - List of source code strings
+            - List of AST sequence strings
+            - List of nl sequence strings
+
+    """
     assert len(sources) == len(langs)
     new_langs = []
     new_sources = []

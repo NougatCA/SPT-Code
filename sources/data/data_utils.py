@@ -5,7 +5,7 @@ import logging
 import sctokenizer
 from code_tokenizer.tokenizer import TokeNizer
 
-from .asts.ast_parser import get_single_ast, get_single_ast_name
+from .asts.ast_parser import
 import vars
 
 logger = logging.getLogger(__name__)
