@@ -295,6 +295,11 @@ class OptimizerArguments:
 class TaskArguments:
     """Arguments for specific tasks"""
 
+    next_code_prediction_max_len: int = field(
+        default='10',
+        metadata={'help': 'Max number of tokens to predict for pre-training task: next code prediction'}
+    )
+
     summarization_language: str = field(
         default='java',
         metadata={'help': 'Language of the source code in code summarization, also the directory of the dataset dir'}
