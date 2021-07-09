@@ -1,18 +1,18 @@
 
 import tree_sitter
 from tree_sitter import Language, Parser
-from ..data_utils import split_identifier
+import re
 
 import vars
 
 
-LANGUAGE = {vars.LANG_GO: Language('build/my-languages.so', 'go'),
-            vars.LANG_JAVASCRIPT: Language('build/my-languages.so', 'javascript'),
-            vars.LANG_PYTHON: Language('build/my-languages.so', 'python'),
-            vars.LANG_JAVA: Language('build/my-languages.so', 'java'),
-            vars.LANG_PHP: Language('build/my-languages.so', 'php'),
-            vars.LANG_RUBY: Language('build/my-languages.so', 'ruby'),
-            vars.LANG_C_SHARP: Language('build/my-languages.so', 'c_sharp')}
+LANGUAGE = {vars.LANG_GO: Language('data/asts/build/my-languages.so', 'go'),
+            vars.LANG_JAVASCRIPT: Language('data/asts/build/my-languages.so', 'javascript'),
+            vars.LANG_PYTHON: Language('data/asts/build/my-languages.so', 'python'),
+            vars.LANG_JAVA: Language('data/asts/build/my-languages.so', 'java'),
+            vars.LANG_PHP: Language('data/asts/build/my-languages.so', 'php'),
+            vars.LANG_RUBY: Language('data/asts/build/my-languages.so', 'ruby'),
+            vars.LANG_C_SHARP: Language('data/asts/build/my-languages.so', 'c_sharp')}
 
 parser = Parser()
 
@@ -161,6 +161,35 @@ STATEMENT_ENDING_STRINGS = {
 
 
 ELIMINATE_AST_NODE = ['(', ')', '{', '}', ';']
+
+
+def camel_split(identifier):
+    matches = re.finditer('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)', identifier)
+    return [m.group(0) for m in matches]
+
+
+def split_identifier(identifier):
+    """
+    Split identifier into a list of subtokens.
+    Tokens except characters and digits will be eliminated.
+
+    Args:
+        identifier (str): given identifier
+
+    Returns:
+        list[str]: list of subtokens
+    """
+    words = []
+
+    word = re.sub(r'[^a-zA-Z0-9]', ' ', identifier)
+    word = re.sub(r'(\d+)', r' \1 ', word)
+    split_words = word.strip().split()
+    for split_word in split_words:
+        camel_words = camel_split(split_word)
+        for camel_word in camel_words:
+            words.append(camel_word.lower())
+
+    return words
 
 
 def parse_ast(source, lang):
