@@ -1,12 +1,11 @@
-import random
 
 import torch
 
 from typing import List
 import itertools
+import random
 
-from vocab import Vocab, transfer_vocab_index
-from asts.ast_parser import get_single_ast
+from data.vocab import Vocab, transfer_vocab_index
 import vars
 
 
@@ -29,12 +28,10 @@ def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
         dict: model inputs
     """
     model_inputs = {}
-
+    # cap
     if task == vars.TASK_CODE_AST_PREDICTION:
-        code_raw = [sample[0] for sample in batch]
-        ast_raw = [sample[1] for sample in batch]
-        nl_raw = [sample[2] for sample in batch]
-        is_ast = [sample[3] for sample in batch]
+
+        code_raw, ast_raw, name_raw, is_ast = map(list, zip(*batch))
 
         model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(code_raw=code_raw,
                                                                                             code_vocab=code_vocab,
@@ -42,73 +39,15 @@ def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
                                                                                             ast_raw=ast_raw,
                                                                                             ast_vocab=ast_vocab,
                                                                                             max_ast_len=max_ast_len,
-                                                                                            nl_raw=nl_raw,
+                                                                                            nl_raw=name_raw,
                                                                                             nl_vocab=nl_vocab,
                                                                                             max_nl_len=max_nl_len)
         model_inputs['labels'] = torch.tensor([[a] for a in is_ast], dtype=torch.long)
         model_inputs['is_cls'] = True
-
+    # ncp
     elif task == vars.TASK_NEXT_CODE_PREDICTION:
-        lang_raw = [sample[0] for sample in batch]
-        code_raw = [sample[1] for sample in batch]
-        nl_raw = [sample[2] for sample in batch]
 
-        former_codes = []
-        latter_codes = []
-        former_asts = []
-        for lang, code in zip(lang_raw, code_raw):
-
-            pos = random.randint(1, len(code) - 2)
-            former_code = code[: pos]
-            latter_code = code[pos:]
-
-            former_ast = get_single_ast(lang=lang, source=former_code)
-
-            former_codes.append(former_code)
-            latter_codes.append(latter_code)
-            former_asts.append(former_ast)
-
-        model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(code_raw=former_codes,
-                                                                                            code_vocab=code_vocab,
-                                                                                            max_code_len=max_code_len,
-                                                                                            ast_raw=former_asts,
-                                                                                            ast_vocab=ast_vocab,
-                                                                                            max_ast_len=max_ast_len,
-                                                                                            nl_raw=nl_raw,
-                                                                                            nl_vocab=nl_vocab,
-                                                                                            max_nl_len=max_nl_len)
-        model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
-            batch=latter_codes, vocab=code_vocab, processor=Vocab.sos_processor, max_len=max_code_len)
-        model_inputs['labels'], _ = get_batch_inputs(batch=latter_codes,
-                                                     vocab=code_vocab,
-                                                     processor=Vocab.eos_processor,
-                                                     max_len=max_code_len)
-        model_inputs['is_gen'] = True
-
-    elif task == vars.TASK_METHOD_NAME_PREDICTION:
-        code_raw = [sample[0] for sample in batch]
-        ast_raw = [sample[1] for sample in batch]
-        nl_raw = [sample[2] for sample in batch]
-
-        model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(code_raw=code_raw,
-                                                                                            code_vocab=code_vocab,
-                                                                                            max_code_len=max_code_len,
-                                                                                            ast_raw=ast_raw,
-                                                                                            ast_vocab=ast_vocab,
-                                                                                            max_ast_len=max_ast_len)
-        model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
-            batch=nl_raw, vocab=nl_vocab, processor=Vocab.sos_processor, max_len=max_nl_len)
-        model_inputs['labels'], _ = get_batch_inputs(batch=nl_raw,
-                                                     vocab=nl_vocab,
-                                                     processor=Vocab.eos_processor,
-                                                     max_len=max_nl_len)
-        model_inputs['is_gen'] = True
-
-    elif task == vars.TASK_SUMMARIZATION:
-        code_raw = [sample[0] for sample in batch]
-        ast_raw = [sample[1] for sample in batch]
-        name_raw = [sample[2] for sample in batch]
-        nl_raw = [sample[3] for sample in batch]
+        code_raw, ast_raw, name_raw, target_raw = map(list, zip(*batch))
 
         model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(code_raw=code_raw,
                                                                                             code_vocab=code_vocab,
@@ -120,8 +59,50 @@ def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
                                                                                             nl_vocab=nl_vocab,
                                                                                             max_nl_len=max_nl_len)
         model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
-            batch=nl_raw, vocab=nl_vocab, processor=Vocab.sos_processor, max_len=max_nl_len)
-        model_inputs['labels'], _ = get_batch_inputs(batch=nl_raw,
+            batch=target_raw, vocab=code_vocab, processor=Vocab.sos_processor, max_len=max_code_len)
+        model_inputs['labels'], _ = get_batch_inputs(batch=target_raw,
+                                                     vocab=code_vocab,
+                                                     processor=Vocab.eos_processor,
+                                                     max_len=max_code_len)
+        model_inputs['is_gen'] = True
+    # mnp
+    elif task == vars.TASK_METHOD_NAME_PREDICTION:
+        code_raw = [sample[0] for sample in batch]
+        ast_raw = [sample[1] for sample in batch]
+        name_raw = [sample[2] for sample in batch]
+
+        model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(code_raw=code_raw,
+                                                                                            code_vocab=code_vocab,
+                                                                                            max_code_len=max_code_len,
+                                                                                            ast_raw=ast_raw,
+                                                                                            ast_vocab=ast_vocab,
+                                                                                            max_ast_len=max_ast_len)
+        model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
+            batch=name_raw, vocab=nl_vocab, processor=Vocab.sos_processor, max_len=max_nl_len)
+        model_inputs['labels'], _ = get_batch_inputs(batch=name_raw,
+                                                     vocab=nl_vocab,
+                                                     processor=Vocab.eos_processor,
+                                                     max_len=max_nl_len)
+        model_inputs['is_gen'] = True
+
+    elif task == vars.TASK_SUMMARIZATION:
+        code_raw = [sample[0] for sample in batch]
+        ast_raw = [sample[1] for sample in batch]
+        name_raw = [sample[2] for sample in batch]
+        name_raw = [sample[3] for sample in batch]
+
+        model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(code_raw=code_raw,
+                                                                                            code_vocab=code_vocab,
+                                                                                            max_code_len=max_code_len,
+                                                                                            ast_raw=ast_raw,
+                                                                                            ast_vocab=ast_vocab,
+                                                                                            max_ast_len=max_ast_len,
+                                                                                            nl_raw=name_raw,
+                                                                                            nl_vocab=nl_vocab,
+                                                                                            max_nl_len=max_nl_len)
+        model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
+            batch=name_raw, vocab=nl_vocab, processor=Vocab.sos_processor, max_len=max_nl_len)
+        model_inputs['labels'], _ = get_batch_inputs(batch=name_raw,
                                                      vocab=nl_vocab,
                                                      processor=Vocab.eos_processor,
                                                      max_len=max_nl_len)

@@ -3,9 +3,11 @@ from torch.utils.data.dataset import Dataset
 import os
 import random
 import logging
+import re
 
 import vars
-from .data_utils import load_dataset_from_dir, load_lines, parse_for_summarization, parse_for_translation
+from .data_utils import load_dataset_from_dir, generate_single_ast_nl, tokenize_source,\
+    parse_for_summarization, parse_for_translation
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +29,7 @@ class CodeDataset(Dataset):
 
         """
         super(CodeDataset, self).__init__()
+        self.args = args
         self.task = task
         self.mode = mode
 
@@ -94,7 +97,25 @@ class CodeDataset(Dataset):
                 return self.codes[index], other_ast, self.names[index], 0
         # ncp
         elif self.task == vars.TASK_NEXT_CODE_PREDICTION:
-            return self.languages[index], self.sources[index], self.names[index]
+
+            source = self.sources[index]
+            lang = self.languages[index]
+
+            matches = re.finditer(r"\b\S", source)
+            indices = [m.start(0) for m in matches]
+            index = random.sample(indices, 1)[0]
+            former_source = source[:index]
+            latter_source = source[index:]
+
+            former_ast, former_nl = generate_single_ast_nl(source=former_source, lang=lang)
+            former_code = tokenize_source(source=former_source, lang=lang)
+
+            latter_code_tokens = tokenize_source(source=latter_source, lang=lang).split(' ')
+            if len(latter_code_tokens) > self.args.next_code_prediction_max_len:
+                latter_code_tokens = latter_code_tokens[:self.args.next_code_prediction_max_len]
+            latter_code = ' '.join(latter_code_tokens)
+
+            return former_code, former_ast, former_nl, latter_code
         # mnp
         elif self.task == vars.TASK_METHOD_NAME_PREDICTION:
             return self.codes[index], self.asts[index], self.names[index]

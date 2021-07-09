@@ -1,9 +1,11 @@
 import re
+import tokenize
+from io import StringIO
 import json
 import os
 import logging
 import sctokenizer
-from code_tokenizer.tokenizer import TokeNizer
+from data.code_tokenizer.tokenizer import TokeNizer
 
 from .asts.ast_parser import generate_single_ast_nl
 import vars
@@ -19,35 +21,6 @@ CODE_TOKENIZER_MAPPING = {vars.LANG_PYTHON: TokeNizer('Python'),
                           vars.LANG_RUBY: TokeNizer('Ruby'),
                           vars.LANG_GO: TokeNizer('Go'),
                           vars.LANG_PHP: TokeNizer('PHP')}
-
-
-def camel_split(identifier):
-    matches = re.finditer('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)', identifier)
-    return [m.group(0) for m in matches]
-
-
-def split_identifier(identifier):
-    """
-    Split identifier into a list of subtokens.
-    Tokens except characters and digits will be eliminated.
-
-    Args:
-        identifier (str): given identifier
-
-    Returns:
-        list[str]: list of subtokens
-    """
-    words = []
-
-    word = re.sub(r'[^a-zA-Z0-9]', ' ', identifier)
-    word = re.sub(r'(\d+)', r' \1 ', word)
-    split_words = word.strip().split()
-    for split_word in split_words:
-        camel_words = camel_split(split_word)
-        for camel_word in camel_words:
-            words.append(camel_word.lower())
-
-    return words
 
 
 def load_lines(path):
@@ -99,12 +72,85 @@ def replace_string_literal(source):
     return re.sub(pattern=STRING_MATCHING_PATTERN, repl='___STR', string=source)
 
 
-def parse_json_file(file, replace_method_name=False):
+def remove_comments_and_docstrings(source, lang):
+    """
+    Remove docs and comments from source string.
+    Thanks to authors of GraphCodeBERT
+    from: https://github.com/microsoft/CodeBERT/blob/master/GraphCodeBERT/codesearch/parser/utils.py#L4
+
+    Args:
+        source (str): Source code string
+        lang (str): Source code language
+
+    Returns:
+        str: Source string
+
+    """
+    if lang == vars.LANG_PYTHON:
+
+        io_obj = StringIO(source)
+        out = ""
+        prev_token_type = tokenize.INDENT
+        last_lineno = -1
+        last_col = 0
+        for tok in tokenize.generate_tokens(io_obj.readline):
+            token_type = tok[0]
+            token_string = tok[1]
+            start_line, start_col = tok[2]
+            end_line, end_col = tok[3]
+            # l_text = tok[4]
+            if start_line > last_lineno:
+                last_col = 0
+            if start_col > last_col:
+                out += (" " * (start_col - last_col))
+            # Remove comments:
+            if token_type == tokenize.COMMENT:
+                pass
+            # This series of conditionals removes docstrings:
+            elif token_type == tokenize.STRING:
+                if prev_token_type != tokenize.INDENT:
+                    # This is likely a docstring; double-check we're not inside an operator:
+                    if prev_token_type != tokenize.NEWLINE:
+                        if start_col > 0:
+                            out += token_string
+            else:
+                out += token_string
+            prev_token_type = token_type
+            last_col = end_col
+            last_lineno = end_line
+        temp = []
+        for x in out.split('\n'):
+            if x.strip() != "":
+                temp.append(x)
+        return '\n'.join(temp)
+    elif lang in [vars.LANG_RUBY]:
+        return source
+    else:
+        def replacer(match):
+            s = match.group(0)
+            if s.startswith('/'):
+                return " "  # note: a space and not an empty string
+            else:
+                return s
+
+        pattern = re.compile(
+            r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+            re.DOTALL | re.MULTILINE
+        )
+        temp = []
+        for x in re.sub(pattern, replacer, source).split('\n'):
+            if x.strip() != "":
+                temp.append(x)
+        return '\n'.join(temp)
+
+
+def parse_json_file(file, lang, replace_method_name=False):
     """
     Parse a dataset file where each line is a json string representing a sample.
 
     Args:
         file (str): The file path
+        lang (str): Source code language
         replace_method_name (bool): Whether to replace method names in codes, default to False
 
     Returns:
@@ -122,13 +168,14 @@ def parse_json_file(file, replace_method_name=False):
             data = json.loads(line.strip())
             name = trim_method_name(data['func_name'])
             source = data['code']
+            source = remove_comments_and_docstrings(source, lang)
             code = replace_string_literal(' '.join(data['code_tokens']))
             if replace_method_name:
                 code = code.replace(name, 'f', 1)
 
             sources.append(source)
             codes.append(code)
-            names.append(' '.join(split_identifier(name)))
+            names.append(name)
 
     return sources, codes, names
 
@@ -182,7 +229,7 @@ def load_pre_train_dataset(file, lang, replace_method_name=False):
             - List of nl strings
     """
     if lang in [vars.LANG_JAVA, vars.LANG_PYTHON, vars.LANG_GO, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_RUBY]:
-        sources, codes, names = parse_json_file(file, replace_method_name)
+        sources, codes, names = parse_json_file(file, lang=lang, replace_method_name=replace_method_name)
         return sources, codes, names
 
 
@@ -232,10 +279,13 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
                 asts = []
                 for source, code, name in zip(sources, codes, names):
                     try:
-                        ast, nl = generate_single_ast_nl(source=source, lang=lang, name=name)
+                        ast, nl = generate_single_ast_nl(source=source,
+                                                         lang=lang,
+                                                         name=name,
+                                                         replace_method_name=replace_method_name)
                         new_sources.append(source)
                         new_codes.append(code)
-                        new_names.append(name)
+                        new_names.append(nl)
                         asts.append(ast)
                     except Exception:
                         continue
@@ -329,6 +379,7 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
     asts = []
     for source, code, nl in zip(sources, codes, nls):
         try:
+            source = remove_comments_and_docstrings(source, lang=lang)
             ast, name = generate_single_ast_nl(source=source, lang=lang)
             new_codes.append(code)
             new_nls.append(nl)
@@ -367,6 +418,9 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
     names = []
     for source, target in zip(sources, targets):
         try:
+            source = remove_comments_and_docstrings(source, lang=source_lang)
+            target = remove_comments_and_docstrings(target, lang=target_lang)
+
             ast, name = generate_single_ast_nl(source=source, lang=source_lang)
             code = tokenize_source(source=source, lang=source_lang)
             tokenized_target = tokenize_source(source=target, lang=target_lang)

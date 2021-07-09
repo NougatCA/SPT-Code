@@ -6,7 +6,7 @@ from transformers import Seq2SeqTrainer
 import argparse
 from typing import Optional
 
-from sources.data.data_collator import collate_fn
+from data.data_collator import collate_fn
 
 
 class CodeTrainer(Seq2SeqTrainer):
