@@ -30,7 +30,7 @@ def train(
         only_test (bool): True when only need to test, default to False
 
     """
-    assert task in [vars.SUMMARIZATION_TASK, vars.TRANSLATION_TASK, vars.SEARCH_TASK]
+    assert task in [vars.TASK_SUMMARIZATION, vars.TASK_TRANSLATION, vars.TASK_SEARCH]
     assert not only_test or isinstance(trained_model, str) or \
            isinstance(trained_model, BartForClassificationAndGeneration), \
            f'The model type is not supported, expect Bart model or string of path, got {type(trained_model)}'
@@ -47,15 +47,15 @@ def train(
         logger.info('Training from scratch')
 
     # start downstream task
-    if task == vars.SUMMARIZATION_TASK:
+    if task == vars.TASK_SUMMARIZATION:
         run_summarization(args=args,
                           trained_model=trained_model,
                           trained_vocab=trained_vocab,
                           only_test=only_test)
-    elif task == vars.TRANSLATION_TASK:
+    elif task == vars.TASK_TRANSLATION:
         run_translation(args=args,
                         trained_model=trained_model,
                         trained_vocab=trained_vocab,
                         only_test=only_test)
-    elif task == vars.SEARCH_TASK:
+    elif task == vars.TASK_SEARCH:
         run_search

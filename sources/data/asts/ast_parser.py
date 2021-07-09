@@ -1,5 +1,3 @@
-import random
-import json
 
 import tree_sitter
 from tree_sitter import Language, Parser
@@ -8,13 +6,13 @@ from ..data_utils import split_identifier
 import vars
 
 
-LANGUAGE = {vars.GO_LANG: Language('build/my-languages.so', 'go'),
-            vars.JAVASCRIPT_LANG: Language('build/my-languages.so', 'javascript'),
-            vars.PYTHON_LANG: Language('build/my-languages.so', 'python'),
-            vars.JAVA_LANG: Language('build/my-languages.so', 'java'),
-            vars.PHP_LANG: Language('build/my-languages.so', 'php'),
-            vars.RUBY_LANG: Language('build/my-languages.so', 'ruby'),
-            vars.C_SHARP_LANG: Language('build/my-languages.so', 'c_sharp')}
+LANGUAGE = {vars.LANG_GO: Language('build/my-languages.so', 'go'),
+            vars.LANG_JAVASCRIPT: Language('build/my-languages.so', 'javascript'),
+            vars.LANG_PYTHON: Language('build/my-languages.so', 'python'),
+            vars.LANG_JAVA: Language('build/my-languages.so', 'java'),
+            vars.LANG_PHP: Language('build/my-languages.so', 'php'),
+            vars.LANG_RUBY: Language('build/my-languages.so', 'ruby'),
+            vars.LANG_C_SHARP: Language('build/my-languages.so', 'c_sharp')}
 
 parser = Parser()
 
@@ -22,7 +20,7 @@ PHP_SOURCE_PREFIX = '<?php '
 PHP_SOURCE_POSTFIX = ' ?>'
 
 PATTERNS_METHOD_NAME = {
-    vars.JAVA_LANG: """
+    vars.LANG_JAVA: """
     (program
         (local_variable_declaration
             declarator: (variable_declarator
@@ -31,7 +29,7 @@ PATTERNS_METHOD_NAME = {
     )
     """,
 
-    vars.PYTHON_LANG: """
+    vars.LANG_PYTHON: """
     (module
         (function_definition
             name: (identifier) @method_name
@@ -39,7 +37,7 @@ PATTERNS_METHOD_NAME = {
     )
     """,
 
-    vars.GO_LANG: """
+    vars.LANG_GO: """
     [
         (source_file
             (method_declaration
@@ -54,7 +52,7 @@ PATTERNS_METHOD_NAME = {
     ]
     """,
 
-    vars.JAVASCRIPT_LANG: """
+    vars.LANG_JAVASCRIPT: """
     (program
         (function_declaration
             name: (identifier) @method_name
@@ -62,7 +60,7 @@ PATTERNS_METHOD_NAME = {
     )
     """,
 
-    vars.RUBY_LANG: """
+    vars.LANG_RUBY: """
     (program
         (method
             name: (identifier) @method_name
@@ -70,7 +68,7 @@ PATTERNS_METHOD_NAME = {
     )
     """,
 
-    vars.PHP_LANG: """
+    vars.LANG_PHP: """
     (program
         (function_definition
             name: (name) @method_name
@@ -80,13 +78,13 @@ PATTERNS_METHOD_NAME = {
 }
 
 PATTERNS_METHOD_INVOCATION = {
-    vars.JAVA_LANG: """
+    vars.LANG_JAVA: """
     (method_invocation
         name: (identifier) @method_invocation
     )
     """,
 
-    vars.PYTHON_LANG: """
+    vars.LANG_PYTHON: """
     [
         (call
             function: (identifier) @method_invocation
@@ -99,7 +97,7 @@ PATTERNS_METHOD_INVOCATION = {
     ]
     """,
 
-    vars.GO_LANG: """
+    vars.LANG_GO: """
     [
         (call_expression
             function: (selector_expression
@@ -112,7 +110,7 @@ PATTERNS_METHOD_INVOCATION = {
     ]
     """,
 
-    vars.JAVASCRIPT_LANG: """
+    vars.LANG_JAVASCRIPT: """
     [
         (call_expression
             function: (member_expression
@@ -125,13 +123,13 @@ PATTERNS_METHOD_INVOCATION = {
     ]
     """,
 
-    vars.RUBY_LANG: """
+    vars.LANG_RUBY: """
     (call
         method: (identifier) @method_invocation
     )
     """,
 
-    vars.PHP_LANG: """
+    vars.LANG_PHP: """
     [
         (scoped_call_expression
             name: (name) @method_invocation
@@ -151,14 +149,14 @@ PATTERNS_METHOD_INVOCATION = {
     """
 }
 
-ENDING_STRINGS_STATEMENT = {
-    vars.JAVA_LANG: 'statement',
-    vars.PYTHON_LANG: 'statement',
-    vars.GO_LANG: 'statement',
-    vars.JAVASCRIPT_LANG: 'statement',
-    vars.RUBY_LANG: ['call', 'assignment', 'if', 'unless_modifier', 'operator_assignment', 'if_modifier', 'return',
+STATEMENT_ENDING_STRINGS = {
+    vars.LANG_JAVA: 'statement',
+    vars.LANG_PYTHON: 'statement',
+    vars.LANG_GO: 'statement',
+    vars.LANG_JAVASCRIPT: 'statement',
+    vars.LANG_RUBY: ['call', 'assignment', 'if', 'unless_modifier', 'operator_assignment', 'if_modifier', 'return',
                      'rescue', 'else', 'unless', 'when', 'for', 'while_modifier', 'until'],
-    vars.PHP_LANG: 'statement'
+    vars.LANG_PHP: 'statement'
 }
 
 
@@ -177,7 +175,7 @@ def parse_ast(source, lang):
 
     """
     parser.set_language(LANGUAGE[lang])
-    if lang == vars.PHP_LANG:
+    if lang == vars.LANG_PHP:
         source = PHP_SOURCE_PREFIX + source + PHP_SOURCE_POSTFIX
     tree = parser.parse(str.encode(source))
     return tree
@@ -197,7 +195,7 @@ def get_node_name(source, node, lang):
 
     """
     if node.is_named:
-        if lang == vars.PHP_LANG:
+        if lang == vars.LANG_PHP:
             return source[node.start_byte - len(PHP_SOURCE_PREFIX): node.end_byte - len(PHP_SOURCE_PREFIX)]
         else:
             return source[node.start_byte: node.end_byte]
@@ -251,7 +249,7 @@ def is_statement_node(node, lang):
         bool: True if given node is a statement node
 
     """
-    ending = ENDING_STRINGS_STATEMENT[lang]
+    ending = STATEMENT_ENDING_STRINGS[lang]
     if isinstance(ending, str):
         return node.type.endswith(ending)
     else:
@@ -273,7 +271,7 @@ def get_node_type(node, lang):
         str: Type of the node
 
     """
-    return f'{node.type}_statement' if lang == vars.RUBY_LANG else node.type
+    return f'{node.type}_statement' if lang == vars.LANG_RUBY else node.type
 
 
 def __statement_xsbt(node, lang):

@@ -13,12 +13,12 @@ logger = logging.getLogger(__name__)
 STRING_MATCHING_PATTERN = re.compile(r'([bruf]*)(\"\"\"|\'\'\'|\"|\')(?:(?!\2)(?:\\.|[^\\]))*\2')
 
 # map the language names between internal and ``code_tokenizer``
-CODE_TOKENIZER_MAPPING = {vars.PYTHON_LANG: TokeNizer('Python'),
-                          vars.JAVA_LANG: TokeNizer('Java'),
-                          vars.JAVASCRIPT_LANG: TokeNizer('JavaScript'),
-                          vars.RUBY_LANG: TokeNizer('Ruby'),
-                          vars.GO_LANG: TokeNizer('Go'),
-                          vars.PHP_LANG: TokeNizer('PHP')}
+CODE_TOKENIZER_MAPPING = {vars.LANG_PYTHON: TokeNizer('Python'),
+                          vars.LANG_JAVA: TokeNizer('Java'),
+                          vars.LANG_JAVASCRIPT: TokeNizer('JavaScript'),
+                          vars.LANG_RUBY: TokeNizer('Ruby'),
+                          vars.LANG_GO: TokeNizer('Go'),
+                          vars.LANG_PHP: TokeNizer('PHP')}
 
 
 def camel_split(identifier):
@@ -141,13 +141,13 @@ def find_all_files(base):
 
 def get_pre_train_dataset_files(lang_dir, lang):
     # if lang in ['go', 'java', 'python', 'javascript', 'php', 'ruby']:
-    if lang in [vars.JAVA_LANG]:
+    if lang in [vars.LANG_JAVA]:
         return [file for file in find_all_files(base=lang_dir) if file.endswith('.jsonl')]
     return None
 
 
 def get_pre_train_dataset(file, lang, replace_method_name=False):
-    if lang in [vars.JAVA_LANG, vars.PYTHON_LANG, vars.GO_LANG, vars.JAVASCRIPT_LANG, vars.PHP_LANG, vars.RUBY_LANG]:
+    if lang in [vars.LANG_JAVA, vars.LANG_PYTHON, vars.LANG_GO, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_RUBY]:
         sources, codes, names = parse_json_file(file, replace_method_name)
         return sources, codes, names
 
@@ -246,12 +246,12 @@ def tokenize_source(source, lang):
         str: Tokenized code, delimited by whitespace, string literal will be replaced by ``___STR``
 
     """
-    if lang in [vars.PYTHON_LANG, vars.JAVA_LANG, vars.JAVASCRIPT_LANG, vars.RUBY_LANG, vars.GO_LANG, vars.PHP_LANG]:
+    if lang in [vars.LANG_PYTHON, vars.LANG_JAVA, vars.LANG_JAVASCRIPT, vars.LANG_RUBY, vars.LANG_GO, vars.LANG_PHP]:
         tokenizer = CODE_TOKENIZER_MAPPING[lang]
         tokens = tokenizer.getPureTokens(source)
         code = replace_string_literal(' '.join(tokens))
         return trim_spaces(code)
-    elif lang in ['c', 'cpp', vars.JAVA_LANG, vars.PYTHON_LANG, vars.PHP_LANG]:
+    elif lang in ['c', 'cpp', vars.LANG_JAVA, vars.LANG_PYTHON, vars.LANG_PHP]:
         tokens = sctokenizer.tokenize_str(source_str=source, lang=lang)
         code = replace_string_literal(' '.join([token.token_value for token in tokens]))
         return trim_spaces(code)

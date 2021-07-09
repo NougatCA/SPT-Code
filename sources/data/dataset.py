@@ -36,14 +36,14 @@ class CodeDataset(Dataset):
         # load pre-training dataset
         if self.mode == 'pre_train':
             self.languages, self.lang_n_line, self.sources, self.codes, self.asts, self.names = load_dataset_from_dir(
-                dataset_dir=self.dataset_dir, replace_method_name=self.task == vars.METHOD_NAME_PREDICTION_TASK)
+                dataset_dir=self.dataset_dir, replace_method_name=self.task == vars.TASK_METHOD_NAME_PREDICTION)
             self.size = len(self.codes)
         # load fine-tuning dataset
         else:
             assert split
             self.dataset_dir = os.path.join(self.dataset_dir, task)
             # code summarization
-            if task == vars.SUMMARIZATION_TASK:
+            if task == vars.TASK_SUMMARIZATION:
                 assert language, '\'Language\' must be specific if downstream task is code summarization'
                 self.dataset_dir = os.path.join(self.dataset_dir, language, split)
 
@@ -59,7 +59,7 @@ class CodeDataset(Dataset):
                 assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
                 self.size = len(self.codes)
             # code translation
-            elif task == vars.TRANSLATION_TASK:
+            elif task == vars.TASK_TRANSLATION:
                 java_path = f'{split}.java-cs.txt.java'
                 c_sharp_path = f'{split}.java-cs.txt.cs'
                 if args.translation_source_language == args.translation_target_language:
@@ -78,12 +78,12 @@ class CodeDataset(Dataset):
                 assert len(self.codes) == len(self.asts) == len(self.names) == len(self.targets)
                 self.size = len(self.codes)
 
-            elif task == vars.SEARCH_TASK:
+            elif task == vars.TASK_SEARCH:
                 pass
 
     def __getitem__(self, index):
         # cap
-        if self.task == vars.CODE_AST_PREDICTION_TASK:
+        if self.task == vars.TASK_CODE_AST_PREDICTION:
             is_ast = random.random() < 0.5
             if is_ast:
                 return self.codes[index], self.asts[index], self.names[index], 1
@@ -93,19 +93,19 @@ class CodeDataset(Dataset):
                     other_ast = self.asts[random.randint(0, self.size - 1)]
                 return self.codes[index], other_ast, self.names[index], 0
         # ncp
-        elif self.task == vars.NEXT_CODE_PREDICTION_TASK:
+        elif self.task == vars.TASK_NEXT_CODE_PREDICTION:
             return self.languages[index], self.sources[index], self.names[index]
         # mnp
-        elif self.task == vars.METHOD_NAME_PREDICTION_TASK:
+        elif self.task == vars.TASK_METHOD_NAME_PREDICTION:
             return self.codes[index], self.asts[index], self.names[index]
         # summarization
-        elif self.task == vars.SUMMARIZATION_TASK:
+        elif self.task == vars.TASK_SUMMARIZATION:
             return self.codes[index], self.asts[index], self.names[index], self.nls[index]
         # translation
-        elif self.task == vars.TRANSLATION_TASK:
+        elif self.task == vars.TASK_TRANSLATION:
             return self.codes[index], self.asts[index], self.names[index], self.targets[index]
         # search
-        elif self.task == vars.SEARCH_TASK:
+        elif self.task == vars.TASK_SEARCH:
             pass
 
     def __len__(self):

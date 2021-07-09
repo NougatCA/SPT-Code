@@ -1,19 +1,19 @@
 
 # pre-training task names
-CODE_AST_PREDICTION_TASK = 'cap'
-NEXT_CODE_PREDICTION_TASK = 'ncp'
-METHOD_NAME_PREDICTION_TASK = 'mnp'
+TASK_CODE_AST_PREDICTION = 'cap'
+TASK_NEXT_CODE_PREDICTION = 'ncp'
+TASK_METHOD_NAME_PREDICTION = 'mnp'
 
 # downstream task names
-SUMMARIZATION_TASK = 'summarization'
-TRANSLATION_TASK = 'translation'
-SEARCH_TASK = 'search'
+TASK_SUMMARIZATION = 'summarization'
+TASK_TRANSLATION = 'translation'
+TASK_SEARCH = 'search'
 
 # programming language
-JAVA_LANG = 'java'
-PYTHON_LANG = 'python'
-GO_LANG = 'go'
-PHP_LANG = 'php'
-JAVASCRIPT_LANG = 'javascript'
-RUBY_LANG = 'ruby'
-C_SHARP_LANG = 'c_sharp'
+LANG_JAVA = 'java'
+LANG_PYTHON = 'python'
+LANG_GO = 'go'
+LANG_PHP = 'php'
+LANG_JAVASCRIPT = 'javascript'
+LANG_RUBY = 'ruby'
+LANG_C_SHARP = 'c_sharp'

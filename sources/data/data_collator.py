@@ -30,7 +30,7 @@ def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
     """
     model_inputs = {}
 
-    if task == vars.CODE_AST_PREDICTION_TASK:
+    if task == vars.TASK_CODE_AST_PREDICTION:
         code_raw = [sample[0] for sample in batch]
         ast_raw = [sample[1] for sample in batch]
         nl_raw = [sample[2] for sample in batch]
@@ -48,7 +48,7 @@ def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
         model_inputs['labels'] = torch.tensor([[a] for a in is_ast], dtype=torch.long)
         model_inputs['is_cls'] = True
 
-    elif task == vars.NEXT_CODE_PREDICTION_TASK:
+    elif task == vars.TASK_NEXT_CODE_PREDICTION:
         lang_raw = [sample[0] for sample in batch]
         code_raw = [sample[1] for sample in batch]
         nl_raw = [sample[2] for sample in batch]
@@ -85,7 +85,7 @@ def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
                                                      max_len=max_code_len)
         model_inputs['is_gen'] = True
 
-    elif task == vars.METHOD_NAME_PREDICTION_TASK:
+    elif task == vars.TASK_METHOD_NAME_PREDICTION:
         code_raw = [sample[0] for sample in batch]
         ast_raw = [sample[1] for sample in batch]
         nl_raw = [sample[2] for sample in batch]
@@ -104,7 +104,7 @@ def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
                                                      max_len=max_nl_len)
         model_inputs['is_gen'] = True
 
-    elif task == vars.SUMMARIZATION_TASK:
+    elif task == vars.TASK_SUMMARIZATION:
         code_raw = [sample[0] for sample in batch]
         ast_raw = [sample[1] for sample in batch]
         name_raw = [sample[2] for sample in batch]
@@ -127,7 +127,7 @@ def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
                                                      max_len=max_nl_len)
         model_inputs['is_gen'] = True
 
-    elif task == vars.TRANSLATION_TASK:
+    elif task == vars.TASK_TRANSLATION:
         code_raw = [sample[0] for sample in batch]
         ast_raw = [sample[1] for sample in batch]
         name_raw = [sample[2] for sample in batch]
@@ -150,7 +150,7 @@ def collate_fn(batch, task, code_vocab, nl_vocab, ast_vocab,
                                                      max_len=max_code_len)
         model_inputs['is_gen'] = True
 
-    elif task == vars.SEARCH_TASK:
+    elif task == vars.TASK_SEARCH:
         pass
 
     return model_inputs

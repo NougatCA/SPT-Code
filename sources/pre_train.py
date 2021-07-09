@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def pre_train(args, tasks=None):
 
     if tasks is None:
-        tasks = [vars.METHOD_NAME_PREDICTION_TASK]
+        tasks = [vars.TASK_METHOD_NAME_PREDICTION]
 
     logger.info('*' * 100)
     logger.info('Initializing pre-training environments')
@@ -96,7 +96,7 @@ def pre_train(args, tasks=None):
 
         dataset.set_task(task)
 
-        if task == vars.CODE_AST_PREDICTION_TASK:
+        if task == vars.TASK_CODE_AST_PREDICTION:
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -150,7 +150,7 @@ def pre_train(args, tasks=None):
             logger.info(f'Pre-training task CAP finished')
             trainer.save_model(os.path.join(args.model_root, 'cap'))
 
-        elif task == vars.NEXT_CODE_PREDICTION_TASK:
+        elif task == vars.TASK_NEXT_CODE_PREDICTION:
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -204,7 +204,7 @@ def pre_train(args, tasks=None):
             logger.info('Pre-training task NCP finished')
             trainer.save_model(os.path.join(args.model_root, 'ncp'))
 
-        elif task == vars.METHOD_NAME_PREDICTION_TASK:
+        elif task == vars.TASK_METHOD_NAME_PREDICTION:
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
