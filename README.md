@@ -12,10 +12,9 @@ pytorch==1.7.1
 transformers==4.8.2
 tokenizers==0.10.3
 tree-sitter==0.19.0
-antlr4-python3-runtime==4.8
+antlr4-python3-runtime==4.9.2
 nltk==3.5
 prettytable==2.1.0
-sctokenizer==0.0.5
 psutil==5.8.0
 CodeTokenizer (https://github.com/Ikuyadeu/CodeTokenizer)
 ```
