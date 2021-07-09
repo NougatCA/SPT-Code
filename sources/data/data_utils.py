@@ -134,19 +134,53 @@ def parse_json_file(file, replace_method_name=False):
 
 
 def find_all_files(base):
+    """
+    Iterator for all file paths in the given base path.
+
+    Args:
+        base (str): Path like string
+
+    Returns:
+        str: Path of each file
+    """
     for root, ds, fs in os.walk(base):
         for f in fs:
             yield os.path.join(root, f)
 
 
-def get_pre_train_dataset_files(lang_dir, lang):
+def iter_pre_train_dataset_files(lang_dir, lang):
+    """
+    Get files for pre-training, all files with extension ``jsonl`` will be included.
+
+    Args:
+        lang_dir (str): Path of language dir
+        lang (str): Source code language
+
+    Returns:
+        list[str]: List of paths of files
+
+    """
     # if lang in ['go', 'java', 'python', 'javascript', 'php', 'ruby']:
     if lang in [vars.LANG_JAVA]:
         return [file for file in find_all_files(base=lang_dir) if file.endswith('.jsonl')]
-    return None
+    return []
 
 
-def get_pre_train_dataset(file, lang, replace_method_name=False):
+def load_pre_train_dataset(file, lang, replace_method_name=False):
+    """
+    Load json dataset from given file.
+
+    Args:
+        file (str): Path of dataset file
+        lang (str): Source code language
+        replace_method_name (bool): Whether to replace method name, default to False
+
+    Returns:
+        (list[str], list[str], list[str]):
+            - List of source code strings
+            - List of tokenized code strings
+            - List of nl strings
+    """
     if lang in [vars.LANG_JAVA, vars.LANG_PYTHON, vars.LANG_GO, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_RUBY]:
         sources, codes, names = parse_json_file(file, replace_method_name)
         return sources, codes, names
@@ -183,14 +217,14 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
             continue
 
         lang = file
-        dataset_files = get_pre_train_dataset_files(path, lang=lang)
-        if dataset_files and len(dataset_files) > 0:
+        dataset_files = iter_pre_train_dataset_files(path, lang=lang)
+        if len(dataset_files) > 0:
             logger.info(f'Loading {lang} dataset')
             n_sample = 0
             for dataset_file_path in dataset_files:
-                sources, codes, names = get_pre_train_dataset(file=dataset_file_path,
-                                                              lang=lang,
-                                                              replace_method_name=replace_method_name)
+                sources, codes, names = load_pre_train_dataset(file=dataset_file_path,
+                                                               lang=lang,
+                                                               replace_method_name=replace_method_name)
 
                 new_sources = []
                 new_codes = []
@@ -230,14 +264,15 @@ def trim_spaces(string):
         string (str): String
 
     Returns:
-        - str: Replaced string
+        str: Replaced string
     """
     return re.sub(r'\s+', ' ', string)
 
 
 def tokenize_source(source, lang):
     """
-    Tokenize the source code into tokens
+    Tokenize the source code into tokens.
+
     Args:
         source (str): Source in string
         lang (str): Language of source code
@@ -262,6 +297,23 @@ def tokenize_source(source, lang):
 
 
 def parse_for_summarization(source_path, code_path, nl_path, lang):
+    """
+    Load and parse dataset for code summarization.
+
+    Args:
+        source_path (str): Path of source code dataset
+        code_path (str): Path of tokenized code dataset, if not file not exist, tokenize on the fly
+        nl_path (str): Path of comment dataset
+        lang (str): Source code language
+
+    Returns:
+        (list[str], list[str], list[str], list[str]):
+            - List of tokenized code strings
+            - List of linearized AST strings
+            - List of name and API sequence strings
+            - List of comment strings
+
+    """
     sources = load_lines(source_path)
 
     if not os.path.isfile(code_path):
@@ -289,6 +341,23 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
 
 
 def parse_for_translation(source_path, source_lang, target_path, target_lang):
+    """
+    Load and parse for code translation.
+
+    Args:
+        source_path (str): Path of source dataset
+        source_lang (str): Source language
+        target_path (str): Path of target dataset
+        target_lang (str): Target language
+
+    Returns:
+        (list[str], list[str], list[str], list[str]):
+            - List of tokenized code strings
+            - List of linearized AST strings
+            - List of name and API sequence strings
+            - List of tokenized target code strings
+
+    """
     sources = load_lines(source_path)
     targets = load_lines(target_path)
 
