@@ -3,7 +3,6 @@ import torch
 
 from typing import List
 import itertools
-import random
 
 from data.vocab import Vocab, transfer_vocab_index
 import vars

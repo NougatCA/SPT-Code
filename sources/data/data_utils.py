@@ -4,23 +4,39 @@ from io import StringIO
 import json
 import os
 import logging
-import sctokenizer
-from data.code_tokenizer.tokenizer import TokeNizer
+from tqdm import tqdm
+from antlr4 import InputStream
 
 from .asts.ast_parser import generate_single_ast_nl
 import vars
+
+from data.antlr_parsers.go.GoLexer import GoLexer
+from data.antlr_parsers.java.Java8Lexer import Java8Lexer
+from data.antlr_parsers.python3.Python3Lexer import Python3Lexer
+from data.antlr_parsers.php.PhpLexer import PhpLexer
+from data.antlr_parsers.javascript.JavaScriptLexer import JavaScriptLexer
+from data.code_tokenizers.ruby.ruby_tokenizer import RubyTokenizer
 
 logger = logging.getLogger(__name__)
 
 STRING_MATCHING_PATTERN = re.compile(r'([bruf]*)(\"\"\"|\'\'\'|\"|\')(?:(?!\2)(?:\\.|[^\\]))*\2')
 
 # map the language names between internal and ``code_tokenizer``
-CODE_TOKENIZER_MAPPING = {vars.LANG_PYTHON: TokeNizer('Python'),
-                          vars.LANG_JAVA: TokeNizer('Java'),
-                          vars.LANG_JAVASCRIPT: TokeNizer('JavaScript'),
-                          vars.LANG_RUBY: TokeNizer('Ruby'),
-                          vars.LANG_GO: TokeNizer('Go'),
-                          vars.LANG_PHP: TokeNizer('PHP')}
+# CODE_TOKENIZER_MAPPING = {vars.LANG_PYTHON: TokeNizer('Python'),
+#                           vars.LANG_JAVA: TokeNizer('Java'),
+#                           vars.LANG_JAVASCRIPT: TokeNizer('JavaScript'),
+#                           vars.LANG_RUBY: TokeNizer('Ruby'),
+#                           vars.LANG_GO: TokeNizer('Go'),
+#                           vars.LANG_PHP: TokeNizer('PHP')}
+MAPPING_LANG_LEXER = {
+    vars.LANG_GO: GoLexer,
+    vars.LANG_JAVA: Java8Lexer,
+    vars.LANG_PYTHON: Python3Lexer,
+    vars.LANG_PHP: PhpLexer,
+    vars.LANG_JAVASCRIPT: JavaScriptLexer,
+    vars.LANG_RUBY: RubyTokenizer()
+    # vars.LANG_C_SHARP: CSharpLexer
+}
 
 
 def load_lines(path):
@@ -164,7 +180,7 @@ def parse_json_file(file, lang, replace_method_name=False):
     codes = []
     names = []
     with open(file, encoding='utf-8') as f:
-        for line in f.readlines():
+        for line in f.readlines()[:200]:
             data = json.loads(line.strip())
             name = trim_method_name(data['func_name'])
             source = data['code']
@@ -208,7 +224,7 @@ def iter_pre_train_dataset_files(lang_dir, lang):
 
     """
     # if lang in ['go', 'java', 'python', 'javascript', 'php', 'ruby']:
-    if lang in [vars.LANG_JAVA]:
+    if lang in [vars.LANG_GO]:
         return [file for file in find_all_files(base=lang_dir) if file.endswith('.jsonl')]
     return []
 
@@ -266,9 +282,10 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
         lang = file
         dataset_files = iter_pre_train_dataset_files(path, lang=lang)
         if len(dataset_files) > 0:
-            logger.info(f'Loading {lang} dataset')
+            logger.info(f'\tLanguage: {lang}')
             n_sample = 0
             for dataset_file_path in dataset_files:
+                logger.info(f'\t\tFile: {dataset_file_path}')
                 sources, codes, names = load_pre_train_dataset(file=dataset_file_path,
                                                                lang=lang,
                                                                replace_method_name=replace_method_name)
@@ -277,7 +294,7 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
                 new_codes = []
                 new_names = []
                 asts = []
-                for source, code, name in zip(sources, codes, names):
+                for source, code, name in tqdm(zip(sources, codes, names), desc='Parsing', leave=False):
                     try:
                         ast, nl = generate_single_ast_nl(source=source,
                                                          lang=lang,
@@ -331,16 +348,18 @@ def tokenize_source(source, lang):
         str: Tokenized code, delimited by whitespace, string literal will be replaced by ``___STR``
 
     """
-    if lang in [vars.LANG_PYTHON, vars.LANG_JAVA, vars.LANG_JAVASCRIPT, vars.LANG_RUBY, vars.LANG_GO, vars.LANG_PHP]:
-        tokenizer = CODE_TOKENIZER_MAPPING[lang]
-        tokens = tokenizer.getPureTokens(source)
+    if lang in [vars.LANG_PYTHON, vars.LANG_JAVA, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_GO]:
+        input_stream = InputStream(source)
+        lexer = MAPPING_LANG_LEXER[lang](input_stream)
+        tokens = [token.text for token in lexer.getAllTokens()]
         code = replace_string_literal(' '.join(tokens))
         return trim_spaces(code)
-    elif lang in ['c', 'cpp', vars.LANG_JAVA, vars.LANG_PYTHON, vars.LANG_PHP]:
-        tokens = sctokenizer.tokenize_str(source_str=source, lang=lang)
-        code = replace_string_literal(' '.join([token.token_value for token in tokens]))
+
+    elif lang == vars.LANG_RUBY:
+        tokens = MAPPING_LANG_LEXER[lang].get_pure_tokens(source)
+        code = replace_string_literal(' '.join([token[0] for token in tokens]))
         return trim_spaces(code)
-    # c#
+
     else:
         # TODO: c# tokenize
         return source[:]

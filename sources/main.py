@@ -41,6 +41,7 @@ if __name__ == '__main__':
     # cuda and parallel
     if main_args.cuda_visible_devices is not None:
         os.environ['CUDA_VISIBLE_DEVICES'] = main_args.cuda_visible_devices
+    os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     main_args.use_cuda = torch.cuda.is_available()
     main_args.parallel = torch.cuda.device_count() > 1
 

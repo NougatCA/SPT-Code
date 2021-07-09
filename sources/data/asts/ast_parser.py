@@ -245,6 +245,8 @@ def get_method_name(source, root, lang):
     """
     query = LANGUAGE[lang].query(PATTERNS_METHOD_NAME[lang])
     captures = query.captures(root)
+    if len(captures) == 0:
+        return ''
     return get_node_name(source, captures[0][0], lang)
 
 

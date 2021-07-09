@@ -330,7 +330,7 @@ def transfer_arg_name(name):
 def add_args(parser):
     """Add all arguments to the given parser."""
     for data_container in [RuntimeArguments, DatasetArguments, SavingArguments,
-                           PreprocessingArguments, ModelArguments, OptimizerArguments]:
+                           PreprocessingArguments, ModelArguments, OptimizerArguments, TaskArguments]:
         group = parser.add_argument_group(data_container.__name__)
         for data_field in dataclasses.fields(data_container):
             group.add_argument(transfer_arg_name(data_field.name),

@@ -114,35 +114,95 @@
 #     break
 
 
+# import json
+# import re
+#
+# from data.code_tokenizer.tokenizer import TokeNizer
+#
+# # map the language names between internal and ``code_tokenizer``
+# CODE_TOKENIZER_MAPPING = {'python': TokeNizer('Python'),
+#                           'java': TokeNizer('Java'),
+#                           'javascript': TokeNizer('JavaScript'),
+#                           'ruby': TokeNizer('Ruby'),
+#                           'go': TokeNizer('Go'),
+#                           'php': TokeNizer('PHP')}
+#
+#
+# def get_source(lang):
+#     sources = []
+#     with open(f'../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
+#         for line in f.readlines():
+#             data = json.loads(line.strip())
+#             source = data['code']
+#             sources.append(source)
+#     return sources
+#
+#
+# def trim_spaces(source):
+#     return re.sub(r'\s+', ' ', source)
+#
+#
+# sources = get_source('java')
+# for source in sources:
+#     tokens = CODE_TOKENIZER_MAPPING['java'].getPureTokens(source)
+#     print(trim_spaces(' '.join(tokens)))
+
+
+# batch = [('a1', 'b1'), ('a2', 'b2')]
+#
+# # a = []
+# # b = []
+# # for sample in batch:
+# #     a.append(sample[0])
+# #     b.append(sample[1])
+#
+# a, b = map(list, zip(*batch))
+#
+# print(a)
+# print(b)
+
+
 import json
+import random
 import re
-
-from data.code_tokenizer.tokenizer import TokeNizer
-
-# map the language names between internal and ``code_tokenizer``
-CODE_TOKENIZER_MAPPING = {'python': TokeNizer('Python'),
-                          'java': TokeNizer('Java'),
-                          'javascript': TokeNizer('JavaScript'),
-                          'ruby': TokeNizer('Ruby'),
-                          'go': TokeNizer('Go'),
-                          'php': TokeNizer('PHP')}
+from data.data_utils import *
 
 
-def get_source(lang):
-    sources = []
+lang = 'ruby'
+
+
+def lang_sample(lang):
     with open(f'../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
-        for line in f.readlines():
-            data = json.loads(line.strip())
-            source = data['code']
-            sources.append(source)
-    return sources
+        line = f.readlines()[random.randint(0, 1000)]
+        data = json.loads(line.strip())
+        name = data['func_name']
+        source = data['code']
+        code = ' '.join(data['code_tokens'])
+    return source, code, name
+#
+#
+# def sample_separation_position(source):
+#     matches = re.finditer(r"\b\S", source)
+#     indices = [m.start(0) for m in matches]
+#     return random.sample(indices, 1)[0]
+#
+#
+# source, _, _ = lang_sample(lang)
+#
+# idx = sample_separation_position(source)
+#
+# print(source)
+# print('-' * 100)
+# print(source[:idx])
+# print('-' * 100)
+# print(source[idx:])
 
 
-def trim_spaces(source):
-    return re.sub(r'\s+', ' ', source)
+source, _, _ = lang_sample(lang)
 
+code = tokenize_source(source, lang)
 
-sources = get_source('java')
-for source in sources:
-    tokens = CODE_TOKENIZER_MAPPING['java'].getPureTokens(source)
-    print(trim_spaces(' '.join(tokens)))
+print(source)
+print('-' * 100)
+print(code)
+

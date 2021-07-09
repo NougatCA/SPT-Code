@@ -19,7 +19,7 @@ def pre_train(args, tasks=None):
 
     if tasks is None:
         # tasks = [vars.TASK_CODE_AST_PREDICTION, vars.TASK_NEXT_CODE_PREDICTION, vars.TASK_METHOD_NAME_PREDICTION]
-        task = [vars.TASK_CODE_AST_PREDICTION]
+        tasks = [vars.TASK_NEXT_CODE_PREDICTION]
 
     logger.info('*' * 100)
     logger.info('Initializing pre-training environments')
@@ -28,10 +28,10 @@ def pre_train(args, tasks=None):
     # datasets
     # --------------------------------------------------
     logger.info('-' * 100)
-    logger.info('Loading datasets')
+    logger.info('Loading and parsing datasets')
     dataset = CodeDataset(args, mode='pre_train')
     logger.info(f'The size of pre_training set: {len(dataset)}')
-    logger.info('Datasets loaded successfully')
+    logger.info('Datasets loaded and parsed successfully')
 
     # --------------------------------------------------
     # vocabs
