@@ -148,20 +148,6 @@
 #     print(trim_spaces(' '.join(tokens)))
 
 
-# batch = [('a1', 'b1'), ('a2', 'b2')]
-#
-# # a = []
-# # b = []
-# # for sample in batch:
-# #     a.append(sample[0])
-# #     b.append(sample[1])
-#
-# a, b = map(list, zip(*batch))
-#
-# print(a)
-# print(b)
-
-
 # import json
 # import random
 # import re
@@ -170,6 +156,10 @@
 #
 # lang = 'go'
 #
+#
+
+# import json
+# import random
 #
 # def lang_sample(lang):
 #     with open(f'../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
@@ -206,9 +196,28 @@
 # print('-' * 100)
 # print(code)
 
+#
+# from data.data_utils import count_non_space_chars
+#
+# s = ' \n\r\t'
+# print(count_non_space_chars(s))
 
-from data.data_utils import count_non_space_chars
 
-s = ' \n\r\t'
-print(count_non_space_chars(s))
+# import tokenize
+# from io import StringIO
+# from data.data_utils import remove_comments_and_docstrings, replace_string_literal, trim_spaces
+#
+#
+# source, _, _ = lang_sample('python')
+# source = remove_comments_and_docstrings(source, 'python')
+# source = replace_string_literal(source)
+#
+#
+# def tokenize_python(source):
+#     tokens = tokenize.generate_tokens(StringIO(source).readline)
+#     return ' '.join([token.string for token in tokens])
+#
+# print(source)
+# print('-' * 100)
+# print(trim_spaces(tokenize_python(source)))
 

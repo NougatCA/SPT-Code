@@ -19,7 +19,7 @@ def pre_train(args, tasks=None):
 
     if tasks is None:
         # tasks = [vars.TASK_CODE_AST_PREDICTION, vars.TASK_NEXT_CODE_PREDICTION, vars.TASK_METHOD_NAME_PREDICTION]
-        tasks = [vars.TASK_NEXT_CODE_PREDICTION]
+        tasks = [vars.TASK_NEXT_CODE_PREDICTION, vars.TASK_METHOD_NAME_PREDICTION]
 
     logger.info('*' * 100)
     logger.info('Initializing pre-training environments')

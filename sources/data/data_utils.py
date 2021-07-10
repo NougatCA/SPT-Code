@@ -181,7 +181,7 @@ def parse_json_file(file, lang, replace_method_name=False):
     codes = []
     names = []
     with open(file, encoding='utf-8') as f:
-        for line in f.readlines()[:200]:
+        for line in f.readlines()[:100]:
             data = json.loads(line.strip())
             name = trim_method_name(data['func_name'])
             source = data['code'].strip()
@@ -225,8 +225,8 @@ def iter_pre_train_dataset_files(lang_dir, lang):
         list[str]: List of paths of files
 
     """
-    # if lang in ['go', 'java', 'python', 'javascript', 'php', 'ruby']:
-    if lang in [vars.LANG_GO]:
+    if lang in [vars.LANG_GO, vars.LANG_JAVA, vars.LANG_PYTHON, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_RUBY]:
+    # if lang in [vars.LANG_JAVASCRIPT]:
         return [file for file in find_all_files(base=lang_dir) if file.endswith('.jsonl')]
     return []
 
@@ -318,7 +318,7 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
                 languages += [lang for _ in range(n_line)]
                 n_sample += n_line
 
-            logger.info(f'{lang} dataset size: {n_sample}')
+            logger.info(f'\t{lang} dataset size: {n_sample}')
             lang_lines.update({lang: n_sample})
 
     assert len(languages) == len(all_sources) == len(all_codes) == len(all_asts)
@@ -335,7 +335,12 @@ def trim_spaces(string):
     Returns:
         str: Replaced string
     """
-    return re.sub(r'\s+', ' ', string)
+    return re.sub(r'\s+', ' ', string).strip()
+
+
+def tokenize_python(source):
+    tokens = tokenize.generate_tokens(StringIO(source).readline)
+    return ' '.join([token.string for token in tokens if token.string.strip() != ''])
 
 
 def tokenize_source(source, lang):
@@ -350,6 +355,10 @@ def tokenize_source(source, lang):
         str: Tokenized code, delimited by whitespace, string literal will be replaced by ``___STR``
 
     """
+    if lang == vars.LANG_PYTHON:
+        tokens = tokenize.generate_tokens(StringIO(source).readline)
+        code = ' '.join([token.string for token in tokens])
+        return trim_spaces(code)
     if lang in [vars.LANG_PYTHON, vars.LANG_JAVA, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_GO]:
         input_stream = InputStream(source)
         lexer = MAPPING_LANG_LEXER[lang](input_stream)

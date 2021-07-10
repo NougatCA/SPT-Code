@@ -20,7 +20,7 @@ class RuntimeArguments:
     )
 
     pre_train_n_epoch: int = field(
-        default=20,
+        default=1,
         metadata={'help': 'Number of data iterations for pre-training on each task'}
     )
 
@@ -157,7 +157,7 @@ class PreprocessingArguments:
     """Arguments for data preprocessing."""
 
     code_vocab_size: int = field(
-        default=50000,
+        default=30000,
         metadata={'help': 'Maximum size of code vocab'}
     )
 
@@ -187,7 +187,7 @@ class PreprocessingArguments:
     )
 
     max_ast_len: int = field(
-        default=100,
+        default=50,
         metadata={'help': 'Maximum length of ast sequence'}
     )
 
