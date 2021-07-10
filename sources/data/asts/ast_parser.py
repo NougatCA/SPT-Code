@@ -324,14 +324,14 @@ def __statement_xsbt(node, lang):
             xsbt.append(get_node_type(node, lang))
     else:
         if is_statement_node(node, lang):
-            xsbt.append(f'<{get_node_type(node, lang)}>')
+            xsbt.append(f'{get_node_type(node, lang)}__')
         len_before = len(xsbt)
         for child in node.children:
             xsbt += __statement_xsbt(node=child, lang=lang)
         if len_before == len(xsbt) and len_before != 0:
             xsbt[-1] = get_node_type(node, lang)
         elif is_statement_node(node, lang):
-            xsbt.append(f'</{get_node_type(node, lang)}>')
+            xsbt.append(f'__{get_node_type(node, lang)}')
 
     return xsbt
 
