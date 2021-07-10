@@ -158,17 +158,19 @@
 #
 #
 
-# import json
-# import random
-#
-# def lang_sample(lang):
-#     with open(f'../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
-#         line = f.readlines()[random.randint(0, 1000)]
-#         data = json.loads(line.strip())
-#         name = data['func_name']
-#         source = data['code']
-#         code = ' '.join(data['code_tokens'])
-#     return source, code, name
+import json
+import random
+import re
+
+
+def lang_sample(lang):
+    with open(f'../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
+        line = f.readlines()[random.randint(0, 1000)]
+        data = json.loads(line.strip())
+        name = data['func_name']
+        source = data['code']
+        code = ' '.join(data['code_tokens'])
+    return source, code, name
 # #
 # #
 # # def sample_separation_position(source):
@@ -205,19 +207,26 @@
 
 # import tokenize
 # from io import StringIO
-# from data.data_utils import remove_comments_and_docstrings, replace_string_literal, trim_spaces
+from data.data_utils import remove_comments_and_docstrings, replace_string_literal, trim_spaces
+import nltk
 #
 #
-# source, _, _ = lang_sample('python')
-# source = remove_comments_and_docstrings(source, 'python')
-# source = replace_string_literal(source)
-#
-#
+lang = 'php'
+source, _, _ = lang_sample(lang)
+source = remove_comments_and_docstrings(source, lang)
+source = replace_string_literal(source)
+
+
+def regular_tokenize(source: str):
+    source = re.sub(r'(\S)[.=](\S)', r'\1 . \2', source)
+    return nltk.word_tokenize(source)
+
+
 # def tokenize_python(source):
 #     tokens = tokenize.generate_tokens(StringIO(source).readline)
 #     return ' '.join([token.string for token in tokens])
 #
-# print(source)
-# print('-' * 100)
-# print(trim_spaces(tokenize_python(source)))
+print(source)
+print('-' * 100)
+print('\n'.join(regular_tokenize(source)))
 

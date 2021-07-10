@@ -7,7 +7,7 @@ import re
 
 import vars
 from .data_utils import load_dataset_from_dir, generate_single_ast_nl, tokenize_source, align_source_code, \
-    parse_for_summarization, parse_for_translation
+    regular_tokenize, parse_for_summarization, parse_for_translation
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,12 @@ class CodeDataset(Dataset):
                     break
             former_source = source[:index]
 
-            former_code, latter_code = align_source_code(former_source=former_source, code=code)
+            try:
+                former_code, latter_code = align_source_code(former_source=former_source, code=code)
+            except Exception:
+                former_code = tokenize_source(former_source, lang=lang)
+                latter_code = regular_tokenize(source[index:])
+
             former_ast, former_nl = generate_single_ast_nl(source=former_source, lang=lang)
 
             latter_code_tokens = latter_code.split(' ')

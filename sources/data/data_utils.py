@@ -6,6 +6,7 @@ import os
 import logging
 from tqdm import tqdm
 from antlr4 import InputStream
+import nltk
 
 from .asts.ast_parser import generate_single_ast_nl
 import vars
@@ -416,6 +417,11 @@ def align_source_code(former_source, code):
     former_code = ' '.join(code_tokens[:token_index])
     latter_code = ' '.join(code_tokens[token_index:])
     return former_code, latter_code
+
+
+def regular_tokenize(source: str):
+    source = re.sub(r'(\S)[.=](\S)', r'\1 . \2', source)
+    return ' '.join(nltk.word_tokenize(source))
 
 
 def parse_for_summarization(source_path, code_path, nl_path, lang):
