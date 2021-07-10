@@ -6,7 +6,7 @@ import logging
 import re
 
 import vars
-from .data_utils import load_dataset_from_dir, generate_single_ast_nl, tokenize_source,\
+from .data_utils import load_dataset_from_dir, generate_single_ast_nl, tokenize_source, align_source_code, \
     parse_for_summarization, parse_for_translation
 
 logger = logging.getLogger(__name__)
@@ -99,21 +99,24 @@ class CodeDataset(Dataset):
         elif self.task == vars.TASK_NEXT_CODE_PREDICTION:
 
             source = self.sources[index]
+            code = self.codes[index]
             lang = self.languages[index]
 
             matches = re.finditer(r"\b\S", source)
             indices = [m.start(0) for m in matches]
-            index = random.sample(indices, 1)[0]
+            while True:
+                index = random.sample(indices, 1)[0]
+                if index < self.args.max_code_len:
+                    break
             former_source = source[:index]
-            latter_source = source[index:]
 
+            former_code, latter_code = align_source_code(former_source=former_source, code=code)
             former_ast, former_nl = generate_single_ast_nl(source=former_source, lang=lang)
-            former_code = tokenize_source(source=former_source, lang=lang)
 
-            latter_code_tokens = tokenize_source(source=latter_source, lang=lang).split(' ')
+            latter_code_tokens = latter_code.split(' ')
             if len(latter_code_tokens) > self.args.next_code_prediction_max_len:
                 latter_code_tokens = latter_code_tokens[:self.args.next_code_prediction_max_len]
-            latter_code = ' '.join(latter_code_tokens)
+                latter_code = ' '.join(latter_code_tokens)
 
             return former_code, former_ast, former_nl, latter_code
         # mnp

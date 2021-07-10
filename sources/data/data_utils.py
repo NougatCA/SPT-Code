@@ -20,6 +20,7 @@ from data.code_tokenizers.ruby.ruby_tokenizer import RubyTokenizer
 logger = logging.getLogger(__name__)
 
 STRING_MATCHING_PATTERN = re.compile(r'([bruf]*)(\"\"\"|\'\'\'|\"|\')(?:(?!\2)(?:\\.|[^\\]))*\2')
+NON_SPACE_MATCHING_PATTERN = re.compile(r'\S')
 
 # map the language names between internal and ``code_tokenizer``
 # CODE_TOKENIZER_MAPPING = {vars.LANG_PYTHON: TokeNizer('Python'),
@@ -183,8 +184,9 @@ def parse_json_file(file, lang, replace_method_name=False):
         for line in f.readlines()[:200]:
             data = json.loads(line.strip())
             name = trim_method_name(data['func_name'])
-            source = data['code']
+            source = data['code'].strip()
             source = remove_comments_and_docstrings(source, lang)
+            source = replace_string_literal(source)
             code = replace_string_literal(' '.join(data['code_tokens']))
             if replace_method_name:
                 code = code.replace(name, 'f', 1)
@@ -363,6 +365,47 @@ def tokenize_source(source, lang):
     else:
         # TODO: c# tokenize
         return source[:]
+
+
+def count_non_space_chars(s):
+    """
+    Count the non-space characters.
+
+    Args:
+        s (str): String to be counted
+
+    Returns:
+        int: Number of non-space characters
+
+    """
+    matches = re.findall(NON_SPACE_MATCHING_PATTERN, s)
+    return len(matches)
+
+
+def align_source_code(former_source, code):
+    """
+    Align former source to code token string and split code into former one and latter one.
+
+    Args:
+        former_source (str): Former part of the source
+        code (str): Tokenized source code
+
+    Returns:
+        (str, str):
+            - Former part of tokenized code
+            - Latter part of tokenized code
+
+    """
+    former_count = count_non_space_chars(former_source)
+    total = 0
+    code_tokens = code.split(' ')
+    token_index = 0
+    while total < former_count:
+        total += count_non_space_chars(code_tokens[token_index])
+        token_index += 1
+    former_code = ' '.join(code_tokens[:token_index])
+    latter_code = ' '.join(code_tokens[token_index:])
+    return former_code, latter_code
 
 
 def parse_for_summarization(source_path, code_path, nl_path, lang):

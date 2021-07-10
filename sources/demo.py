@@ -162,47 +162,53 @@
 # print(b)
 
 
-import json
-import random
-import re
-from data.data_utils import *
-
-
-lang = 'ruby'
-
-
-def lang_sample(lang):
-    with open(f'../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
-        line = f.readlines()[random.randint(0, 1000)]
-        data = json.loads(line.strip())
-        name = data['func_name']
-        source = data['code']
-        code = ' '.join(data['code_tokens'])
-    return source, code, name
+# import json
+# import random
+# import re
+# from data.data_utils import *
 #
 #
-# def sample_separation_position(source):
-#     matches = re.finditer(r"\b\S", source)
-#     indices = [m.start(0) for m in matches]
-#     return random.sample(indices, 1)[0]
+# lang = 'go'
+#
+#
+# def lang_sample(lang):
+#     with open(f'../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
+#         line = f.readlines()[random.randint(0, 1000)]
+#         data = json.loads(line.strip())
+#         name = data['func_name']
+#         source = data['code']
+#         code = ' '.join(data['code_tokens'])
+#     return source, code, name
+# #
+# #
+# # def sample_separation_position(source):
+# #     matches = re.finditer(r"\b\S", source)
+# #     indices = [m.start(0) for m in matches]
+# #     return random.sample(indices, 1)[0]
+# #
+# #
+# # source, _, _ = lang_sample(lang)
+# #
+# # idx = sample_separation_position(source)
+# #
+# # print(source)
+# # print('-' * 100)
+# # print(source[:idx])
+# # print('-' * 100)
+# # print(source[idx:])
 #
 #
 # source, _, _ = lang_sample(lang)
 #
-# idx = sample_separation_position(source)
+# code = tokenize_source(source, lang)
 #
 # print(source)
 # print('-' * 100)
-# print(source[:idx])
-# print('-' * 100)
-# print(source[idx:])
+# print(code)
 
 
-source, _, _ = lang_sample(lang)
+from data.data_utils import count_non_space_chars
 
-code = tokenize_source(source, lang)
-
-print(source)
-print('-' * 100)
-print(code)
+s = ' \n\r\t'
+print(count_non_space_chars(s))
 
