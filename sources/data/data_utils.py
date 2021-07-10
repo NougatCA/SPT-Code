@@ -10,6 +10,7 @@ import nltk
 
 from .asts.ast_parser import generate_single_ast_nl
 import vars
+from utils.timer import Timer
 
 from data.antlr_parsers.go.GoLexer import GoLexer
 from data.antlr_parsers.java.Java8Lexer import Java8Lexer
@@ -23,13 +24,6 @@ logger = logging.getLogger(__name__)
 STRING_MATCHING_PATTERN = re.compile(r'([bruf]*)(\"\"\"|\'\'\'|\"|\')(?:(?!\2)(?:\\.|[^\\]))*\2')
 NON_SPACE_MATCHING_PATTERN = re.compile(r'\S')
 
-# map the language names between internal and ``code_tokenizer``
-# CODE_TOKENIZER_MAPPING = {vars.LANG_PYTHON: TokeNizer('Python'),
-#                           vars.LANG_JAVA: TokeNizer('Java'),
-#                           vars.LANG_JAVASCRIPT: TokeNizer('JavaScript'),
-#                           vars.LANG_RUBY: TokeNizer('Ruby'),
-#                           vars.LANG_GO: TokeNizer('Go'),
-#                           vars.LANG_PHP: TokeNizer('PHP')}
 MAPPING_LANG_LEXER = {
     vars.LANG_GO: GoLexer,
     vars.LANG_JAVA: Java8Lexer,
@@ -37,7 +31,6 @@ MAPPING_LANG_LEXER = {
     vars.LANG_PHP: PhpLexer,
     vars.LANG_JAVASCRIPT: JavaScriptLexer,
     vars.LANG_RUBY: RubyTokenizer()
-    # vars.LANG_C_SHARP: CSharpLexer
 }
 
 
@@ -270,6 +263,7 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
             - List of str: split method name string
 
     """
+
     languages = []
     lang_lines = {}
     all_sources = []
@@ -285,10 +279,11 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
         lang = file
         dataset_files = iter_pre_train_dataset_files(path, lang=lang)
         if len(dataset_files) > 0:
-            logger.info(f'\tLanguage: {lang}')
+            logger.info(f'  Language: {lang}')
             n_sample = 0
             for dataset_file_path in dataset_files:
-                logger.info(f'\t\tFile: {dataset_file_path}')
+
+                logger.info(f'    File: {dataset_file_path}')
                 sources, codes, names = load_pre_train_dataset(file=dataset_file_path,
                                                                lang=lang,
                                                                replace_method_name=replace_method_name)
@@ -319,7 +314,7 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
                 languages += [lang for _ in range(n_line)]
                 n_sample += n_line
 
-            logger.info(f'\t{lang} dataset size: {n_sample}')
+            logger.info(f'  {lang} dataset size: {n_sample}')
             lang_lines.update({lang: n_sample})
 
     assert len(languages) == len(all_sources) == len(all_codes) == len(all_asts)
@@ -340,6 +335,16 @@ def trim_spaces(string):
 
 
 def tokenize_python(source):
+    """
+    Python lib to tokenize python source code.
+
+    Args:
+        source (str): Source code string
+
+    Returns:
+        str: Tokenized code string
+
+    """
     tokens = tokenize.generate_tokens(StringIO(source).readline)
     return ' '.join([token.string for token in tokens if token.string.strip() != ''])
 
@@ -367,7 +372,6 @@ def tokenize_source(source, lang):
         tokens = [token.text for token in lexer.getAllTokens()]
         code = replace_string_literal(' '.join(tokens))
         return trim_spaces(code)
-
     elif lang == vars.LANG_RUBY:
         tokens = MAPPING_LANG_LEXER[lang].get_pure_tokens(source)
         code = replace_string_literal(' '.join([token[0] for token in tokens]))
@@ -375,7 +379,8 @@ def tokenize_source(source, lang):
 
     else:
         # TODO: c# tokenize
-        return source[:]
+        code = replace_string_literal(regular_tokenize(source))
+        return trim_spaces(code)
 
 
 def count_non_space_chars(s):
@@ -420,6 +425,15 @@ def align_source_code(former_source, code):
 
 
 def regular_tokenize(source: str):
+    """
+    NLTK word tokenize with simple adoptions for source code.
+
+    Args:
+        source (str): Source code string.
+
+    Returns:
+        str: Tokenized code string
+    """
     source = re.sub(r'(\S)[.=](\S)', r'\1 . \2', source)
     return ' '.join(nltk.word_tokenize(source))
 

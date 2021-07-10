@@ -5,13 +5,13 @@ import logging
 from typing import Union, Tuple
 import os
 
-from ..models.bart import BartForClassificationAndGeneration
-from ..data.vocab import Vocab, load_vocab
-from ..data.dataset import CodeDataset
-from ..utils.general import count_params, human_format, layer_wise_parameters
-from ..eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics
-from ..utils.callbacks import LogStateCallBack
-from ..utils.trainer import CodeTrainer
+from models.bart import BartForClassificationAndGeneration
+from data.vocab import Vocab, load_vocab
+from data.dataset import CodeDataset
+from utils.general import count_params, human_format, layer_wise_parameters
+from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics
+from utils.callbacks import LogStateCallBack
+from utils.trainer import CodeTrainer
 
 logger = logging.getLogger(__name__)
 

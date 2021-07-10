@@ -295,8 +295,13 @@ class OptimizerArguments:
 class TaskArguments:
     """Arguments for specific tasks"""
 
+    next_code_prediction_min_start_token: int = field(
+        default=5,
+        metadata={'help': 'Min number of tokens of the former part of code'}
+    )
+
     next_code_prediction_max_len: int = field(
-        default='10',
+        default=10,
         metadata={'help': 'Max number of tokens to predict for pre-training task: next code prediction'}
     )
 

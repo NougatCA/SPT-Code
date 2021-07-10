@@ -33,13 +33,11 @@ class CodeTrainer(Seq2SeqTrainer):
                           batch_size=self.main_args.batch_size,
                           shuffle=True,
                           collate_fn=lambda batch: collate_fn(batch,
+                                                              args=self.main_args,
                                                               task=self.task,
                                                               code_vocab=self.code_vocab,
                                                               nl_vocab=self.nl_vocab,
-                                                              ast_vocab=self.ast_vocab,
-                                                              max_code_len=self.main_args.max_code_len,
-                                                              max_ast_len=self.main_args.max_ast_len,
-                                                              max_nl_len=self.main_args.max_nl_len))
+                                                              ast_vocab=self.ast_vocab))
 
     def get_eval_dataloader(self, eval_dataset: Optional[Dataset] = None) -> DataLoader:
         if eval_dataset:
@@ -47,25 +45,21 @@ class CodeTrainer(Seq2SeqTrainer):
         return DataLoader(dataset=self.eval_dataset,
                           batch_size=self.main_args.eval_batch_size,
                           collate_fn=lambda batch: collate_fn(batch,
+                                                              args=self.main_args,
                                                               task=self.task,
                                                               code_vocab=self.code_vocab,
                                                               nl_vocab=self.nl_vocab,
-                                                              ast_vocab=self.ast_vocab,
-                                                              max_code_len=self.main_args.max_code_len,
-                                                              max_ast_len=self.main_args.max_ast_len,
-                                                              max_nl_len=self.main_args.max_nl_len))
+                                                              ast_vocab=self.ast_vocab))
 
     def get_test_dataloader(self, test_dataset: Dataset) -> DataLoader:
         return DataLoader(dataset=test_dataset,
                           batch_size=self.main_args.eval_batch_size,
                           collate_fn=lambda batch: collate_fn(batch,
+                                                              args=self.main_args,
                                                               task=self.task,
                                                               code_vocab=self.code_vocab,
                                                               nl_vocab=self.nl_vocab,
-                                                              ast_vocab=self.ast_vocab,
-                                                              max_code_len=self.main_args.max_code_len,
-                                                              max_ast_len=self.main_args.max_ast_len,
-                                                              max_nl_len=self.main_args.max_nl_len))
+                                                              ast_vocab=self.ast_vocab))
 
     def set_task(self, task):
         self.task = task

@@ -7,6 +7,7 @@ from data.vocab import Vocab
 
 from downstream_tasks.summarization import run_summarization
 from downstream_tasks.translation import run_translation
+from downstream_tasks.search import run_search
 
 logger = logging.getLogger(__name__)
 
@@ -58,4 +59,7 @@ def train(
                         trained_vocab=trained_vocab,
                         only_test=only_test)
     elif task == vars.TASK_SEARCH:
-        run_search
+        run_search(args=args,
+                   trained_model=trained_model,
+                   trained_vocab=trained_vocab,
+                   only_test=only_test)

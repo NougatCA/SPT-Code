@@ -104,6 +104,10 @@ class CodeDataset(Dataset):
 
             matches = re.finditer(r"\b\S", source)
             indices = [m.start(0) for m in matches]
+            if len(indices) <= 2 * self.args.next_code_prediction_min_start_token:
+                indices = indices[len(indices) // 2:]
+            else:
+                indices = indices[self.args.next_code_prediction_min_start_token:]
             while True:
                 index = random.sample(indices, 1)[0]
                 if index < self.args.max_code_len:
@@ -116,14 +120,12 @@ class CodeDataset(Dataset):
                 former_code = tokenize_source(former_source, lang=lang)
                 latter_code = regular_tokenize(source[index:])
 
-            former_ast, former_nl = generate_single_ast_nl(source=former_source, lang=lang)
-
             latter_code_tokens = latter_code.split(' ')
             if len(latter_code_tokens) > self.args.next_code_prediction_max_len:
                 latter_code_tokens = latter_code_tokens[:self.args.next_code_prediction_max_len]
                 latter_code = ' '.join(latter_code_tokens)
 
-            return former_code, former_ast, former_nl, latter_code
+            return former_code, self.asts[index], self.names[index], latter_code
         # mnp
         elif self.task == vars.TASK_METHOD_NAME_PREDICTION:
             return self.codes[index], self.asts[index], self.names[index]

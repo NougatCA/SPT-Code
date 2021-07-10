@@ -1,6 +1,5 @@
 
-from transformers import BartConfig, Seq2SeqTrainingArguments, \
-    IntervalStrategy, SchedulerType
+from transformers import BartConfig, Seq2SeqTrainingArguments, IntervalStrategy, SchedulerType
 
 import logging
 import os
