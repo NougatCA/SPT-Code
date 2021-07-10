@@ -358,8 +358,9 @@ def tokenize_source(source, lang):
     if lang == vars.LANG_PYTHON:
         tokens = tokenize.generate_tokens(StringIO(source).readline)
         code = ' '.join([token.string for token in tokens])
+        code = replace_string_literal(code)
         return trim_spaces(code)
-    if lang in [vars.LANG_PYTHON, vars.LANG_JAVA, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_GO]:
+    if lang in [vars.LANG_JAVA, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_GO]:
         input_stream = InputStream(source)
         lexer = MAPPING_LANG_LEXER[lang](input_stream)
         tokens = [token.text for token in lexer.getAllTokens()]
