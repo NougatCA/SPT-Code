@@ -1,5 +1,6 @@
-from transformers import BartModel, BartForConditionalGeneration, BartConfig, Seq2SeqTrainingArguments, \
-    IntervalStrategy, SchedulerType, BartForSequenceClassification
+
+from transformers import BartConfig, Seq2SeqTrainingArguments, \
+    IntervalStrategy, SchedulerType
 
 import logging
 import os
@@ -260,6 +261,5 @@ def pre_train(args, tasks=None):
             trainer.save_model(os.path.join(args.model_root, 'MNP'))
 
     logger.info('Pre-training finished')
-    model.save()
 
     return model, (code_vocab, ast_vocab, nl_vocab)
