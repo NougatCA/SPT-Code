@@ -81,6 +81,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                                                         ast_vocab=ast_vocab,
                                                                                         max_ast_len=args.max_ast_len,
                                                                                         nl_raw=nl_raw,
+                                                                                        nl_vocab=nl_vocab,
                                                                                         max_nl_len=args.max_nl_len)
 
         model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
