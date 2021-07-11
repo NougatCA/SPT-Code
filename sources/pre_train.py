@@ -4,7 +4,7 @@ from transformers import BartConfig, Seq2SeqTrainingArguments, IntervalStrategy,
 import logging
 import os
 
-import vars
+import enums
 from data.dataset import CodeDataset
 from data.vocab import Vocab
 from utils.general import count_params, human_format, layer_wise_parameters
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def pre_train(args, tasks=None):
 
     if tasks is None:
-        tasks = [vars.TASK_CODE_AST_PREDICTION, vars.TASK_NEXT_CODE_PREDICTION, vars.TASK_METHOD_NAME_PREDICTION]
+        tasks = [enums.TASK_CODE_AST_PREDICTION, enums.TASK_NEXT_CODE_PREDICTION, enums.TASK_METHOD_NAME_PREDICTION]
         # tasks = [vars.TASK_METHOD_NAME_PREDICTION]
 
     logger.info('*' * 100)
@@ -97,7 +97,7 @@ def pre_train(args, tasks=None):
 
         dataset.set_task(task)
 
-        if task == vars.TASK_CODE_AST_PREDICTION:
+        if task == enums.TASK_CODE_AST_PREDICTION:
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -151,7 +151,7 @@ def pre_train(args, tasks=None):
             logger.info(f'Pre-training task CAP finished')
             trainer.save_model(os.path.join(args.model_root, 'cap'))
 
-        elif task == vars.TASK_NEXT_CODE_PREDICTION:
+        elif task == enums.TASK_NEXT_CODE_PREDICTION:
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -205,7 +205,7 @@ def pre_train(args, tasks=None):
             logger.info('Pre-training task NCP finished')
             trainer.save_model(os.path.join(args.model_root, 'ncp'))
 
-        elif task == vars.TASK_METHOD_NAME_PREDICTION:
+        elif task == enums.TASK_METHOD_NAME_PREDICTION:
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------

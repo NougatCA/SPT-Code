@@ -1,7 +1,7 @@
 import logging
 from typing import Union, Tuple
 
-import vars
+import enums
 from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab
 
@@ -31,7 +31,7 @@ def train(
         only_test (bool): True when only need to test, default to False
 
     """
-    assert task in [vars.TASK_SUMMARIZATION, vars.TASK_TRANSLATION, vars.TASK_SEARCH]
+    assert task in [enums.TASK_SUMMARIZATION, enums.TASK_TRANSLATION, enums.TASK_SEARCH]
     assert not only_test or isinstance(trained_model, str) or \
            isinstance(trained_model, BartForClassificationAndGeneration), \
            f'The model type is not supported, expect Bart model or string of path, got {type(trained_model)}'
@@ -48,17 +48,17 @@ def train(
         logger.info('Training from scratch')
 
     # start downstream task
-    if task == vars.TASK_SUMMARIZATION:
+    if task == enums.TASK_SUMMARIZATION:
         run_summarization(args=args,
                           trained_model=trained_model,
                           trained_vocab=trained_vocab,
                           only_test=only_test)
-    elif task == vars.TASK_TRANSLATION:
+    elif task == enums.TASK_TRANSLATION:
         run_translation(args=args,
                         trained_model=trained_model,
                         trained_vocab=trained_vocab,
                         only_test=only_test)
-    elif task == vars.TASK_SEARCH:
+    elif task == enums.TASK_SEARCH:
         run_search(args=args,
                    trained_model=trained_model,
                    trained_vocab=trained_vocab,

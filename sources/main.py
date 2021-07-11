@@ -11,13 +11,15 @@ from prettytable import PrettyTable
 from args import add_args
 from train import train
 from pre_train import pre_train
+import enums
 
 
 def main(args):
-    model, vocabs = pre_train(args)
+    # model, vocabs = pre_train(args)
     # train(args, trained_model=model, trained_vocab=vocabs)
 
-    # train(args)
+    train(args, task=enums.TASK_SUMMARIZATION)
+
     # train(args,
     #       model_dir='../outputs/default_model_20210622_095911/models/',
     #       vocab_dir='../outputs/default_model_20210622_095911/vocabs/',
@@ -73,7 +75,7 @@ if __name__ == '__main__':
     config_table.field_names = ["Configuration", "Value"]
     config_table.align["Configuration"] = "l"
     config_table.align["Value"] = "l"
-    for config, value in vars(main_args).items():
+    for config, value in enums(main_args).items():
         config_table.add_row([config, str(value)])
     logger.debug('Configurations:\n{}'.format(config_table))
 

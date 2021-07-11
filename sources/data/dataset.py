@@ -5,7 +5,7 @@ import random
 import logging
 import re
 
-import vars
+import enums
 from .data_utils import load_dataset_from_dir, tokenize_source, align_source_code, \
     regular_tokenize, parse_for_summarization, parse_for_translation
 
@@ -46,13 +46,13 @@ class CodeDataset(Dataset):
             assert split
             self.dataset_dir = os.path.join(self.dataset_dir, task)
             # code summarization
-            if task == vars.TASK_SUMMARIZATION:
+            if task == enums.TASK_SUMMARIZATION:
                 assert language, '\'Language\' must be specific if downstream task is code summarization'
                 self.dataset_dir = os.path.join(self.dataset_dir, language, split)
 
-                self.source_path = os.path.join(self.dataset_dir, args.source_filename)
-                self.code_path = os.path.join(self.dataset_dir, args.code_filename)
-                self.nl_path = os.path.join(self.dataset_dir, args.nl_filename)
+                self.source_path = os.path.join(self.dataset_dir, 'flat.code')
+                self.code_path = os.path.join(self.dataset_dir, 'token.code')
+                self.nl_path = os.path.join(self.dataset_dir, 'token.nl')
 
                 self.codes, self.asts, self.names, self.nls = parse_for_summarization(source_path=self.source_path,
                                                                                       code_path=self.code_path,
@@ -62,7 +62,7 @@ class CodeDataset(Dataset):
                 assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
                 self.size = len(self.codes)
             # code translation
-            elif task == vars.TASK_TRANSLATION:
+            elif task == enums.TASK_TRANSLATION:
                 java_path = f'{split}.java-cs.txt.java'
                 c_sharp_path = f'{split}.java-cs.txt.cs'
                 if args.translation_source_language == args.translation_target_language:
@@ -81,12 +81,12 @@ class CodeDataset(Dataset):
                 assert len(self.codes) == len(self.asts) == len(self.names) == len(self.targets)
                 self.size = len(self.codes)
 
-            elif task == vars.TASK_SEARCH:
+            elif task == enums.TASK_SEARCH:
                 pass
 
     def __getitem__(self, index):
         # cap
-        if self.task == vars.TASK_CODE_AST_PREDICTION:
+        if self.task == enums.TASK_CODE_AST_PREDICTION:
             is_ast = random.random() < 0.5
             if is_ast:
                 return self.codes[index], self.asts[index], self.names[index], 1
@@ -96,7 +96,7 @@ class CodeDataset(Dataset):
                     other_ast = self.asts[random.randint(0, self.size - 1)]
                 return self.codes[index], other_ast, self.names[index], 0
         # ncp
-        elif self.task == vars.TASK_NEXT_CODE_PREDICTION:
+        elif self.task == enums.TASK_NEXT_CODE_PREDICTION:
 
             source = self.sources[index]
             code = self.codes[index]
@@ -127,16 +127,16 @@ class CodeDataset(Dataset):
 
             return former_code, self.asts[index], self.names[index], latter_code
         # mnp
-        elif self.task == vars.TASK_METHOD_NAME_PREDICTION:
+        elif self.task == enums.TASK_METHOD_NAME_PREDICTION:
             return self.codes_wo_name[index], self.asts[index], self.names_wo_name[index], self.names[index]
         # summarization
-        elif self.task == vars.TASK_SUMMARIZATION:
+        elif self.task == enums.TASK_SUMMARIZATION:
             return self.codes[index], self.asts[index], self.names[index], self.nls[index]
         # translation
-        elif self.task == vars.TASK_TRANSLATION:
+        elif self.task == enums.TASK_TRANSLATION:
             return self.codes[index], self.asts[index], self.names[index], self.targets[index]
         # search
-        elif self.task == vars.TASK_SEARCH:
+        elif self.task == enums.TASK_SEARCH:
             pass
 
     def __len__(self):

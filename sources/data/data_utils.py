@@ -9,7 +9,7 @@ from antlr4 import InputStream
 import nltk
 
 from .asts.ast_parser import generate_single_ast_nl, split_identifier
-import vars
+import enums
 from utils.timer import Timer
 
 from data.antlr_parsers.go.GoLexer import GoLexer
@@ -25,12 +25,12 @@ STRING_MATCHING_PATTERN = re.compile(r'([bruf]*)(\"\"\"|\'\'\'|\"|\')(?:(?!\2)(?
 NON_SPACE_MATCHING_PATTERN = re.compile(r'\S')
 
 MAPPING_LANG_LEXER = {
-    vars.LANG_GO: GoLexer,
-    vars.LANG_JAVA: Java8Lexer,
-    vars.LANG_PYTHON: Python3Lexer,
-    vars.LANG_PHP: PhpLexer,
-    vars.LANG_JAVASCRIPT: JavaScriptLexer,
-    vars.LANG_RUBY: RubyTokenizer()
+    enums.LANG_GO: GoLexer,
+    enums.LANG_JAVA: Java8Lexer,
+    enums.LANG_PYTHON: Python3Lexer,
+    enums.LANG_PHP: PhpLexer,
+    enums.LANG_JAVASCRIPT: JavaScriptLexer,
+    enums.LANG_RUBY: RubyTokenizer()
 }
 
 
@@ -97,7 +97,7 @@ def remove_comments_and_docstrings(source, lang):
         str: Source string
 
     """
-    if lang == vars.LANG_PYTHON:
+    if lang == enums.LANG_PYTHON:
 
         io_obj = StringIO(source)
         out = ""
@@ -134,7 +134,7 @@ def remove_comments_and_docstrings(source, lang):
             if x.strip() != "":
                 temp.append(x)
         return '\n'.join(temp)
-    elif lang in [vars.LANG_RUBY]:
+    elif lang in [enums.LANG_RUBY]:
         return source
     else:
         def replacer(match):
@@ -223,7 +223,7 @@ def iter_pre_train_dataset_files(lang_dir, lang):
         list[str]: List of paths of files
 
     """
-    if lang in [vars.LANG_GO, vars.LANG_JAVA, vars.LANG_PYTHON, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_RUBY]:
+    if lang in [enums.LANG_GO, enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_JAVASCRIPT, enums.LANG_PHP, enums.LANG_RUBY]:
     # if lang in [vars.LANG_JAVASCRIPT]:
         return [file for file in find_all_files(base=lang_dir) if file.endswith('.jsonl')]
     return []
@@ -245,7 +245,7 @@ def load_pre_train_dataset(file, lang):
             - List of tokenized code strings with method names replaced
 
     """
-    if lang in [vars.LANG_JAVA, vars.LANG_PYTHON, vars.LANG_GO, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_RUBY]:
+    if lang in [enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_GO, enums.LANG_JAVASCRIPT, enums.LANG_PHP, enums.LANG_RUBY]:
         sources, codes, names, codes_wo_name = parse_json_file(file, lang=lang)
         return sources, codes, names, codes_wo_name
 
@@ -379,18 +379,18 @@ def tokenize_source(source, lang):
         str: Tokenized code, delimited by whitespace, string literal will be replaced by ``___STR``
 
     """
-    if lang == vars.LANG_PYTHON:
+    if lang == enums.LANG_PYTHON:
         tokens = tokenize.generate_tokens(StringIO(source).readline)
         code = ' '.join([token.string for token in tokens])
         code = replace_string_literal(code)
         return trim_spaces(code)
-    if lang in [vars.LANG_JAVA, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_GO]:
+    if lang in [enums.LANG_JAVA, enums.LANG_JAVASCRIPT, enums.LANG_PHP, enums.LANG_GO]:
         input_stream = InputStream(source)
         lexer = MAPPING_LANG_LEXER[lang](input_stream)
         tokens = [token.text for token in lexer.getAllTokens()]
         code = replace_string_literal(' '.join(tokens))
         return trim_spaces(code)
-    elif lang == vars.LANG_RUBY:
+    elif lang == enums.LANG_RUBY:
         tokens = MAPPING_LANG_LEXER[lang].get_pure_tokens(source)
         code = replace_string_literal(' '.join([token[0] for token in tokens]))
         return trim_spaces(code)

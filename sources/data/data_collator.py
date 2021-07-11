@@ -5,7 +5,7 @@ from typing import List
 import itertools
 
 from data.vocab import Vocab, transfer_vocab_index
-import vars
+import enums
 
 
 def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
@@ -26,7 +26,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
     """
     model_inputs = {}
     # cap
-    if task == vars.TASK_CODE_AST_PREDICTION:
+    if task == enums.TASK_CODE_AST_PREDICTION:
 
         code_raw, ast_raw, name_raw, is_ast = map(list, zip(*batch))
 
@@ -43,7 +43,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
         model_inputs['labels'] = torch.tensor([[a] for a in is_ast], dtype=torch.long)
         model_inputs['is_cls'] = True
     # ncp
-    elif task == vars.TASK_NEXT_CODE_PREDICTION:
+    elif task == enums.TASK_NEXT_CODE_PREDICTION:
 
         code_raw, ast_raw, name_raw, target_raw = map(list, zip(*batch))
 
@@ -69,7 +69,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                      max_len=args.next_code_prediction_max_len)
         model_inputs['is_gen'] = True
     # mnp
-    elif task == vars.TASK_METHOD_NAME_PREDICTION:
+    elif task == enums.TASK_METHOD_NAME_PREDICTION:
 
         code_raw, ast_raw, nl_raw, name_raw = map(list, zip(*batch))
 
@@ -95,7 +95,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                      max_len=args.max_nl_len)
         model_inputs['is_gen'] = True
 
-    elif task == vars.TASK_SUMMARIZATION:
+    elif task == enums.TASK_SUMMARIZATION:
 
         code_raw, ast_raw, name_raw, nl_raw = map(list, zip(*batch))
 
@@ -121,7 +121,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                      max_len=args.max_nl_len)
         model_inputs['is_gen'] = True
 
-    elif task == vars.TASK_TRANSLATION:
+    elif task == enums.TASK_TRANSLATION:
 
         code_raw, ast_raw, name_raw, target_raw = map(list, zip(*batch))
 
@@ -147,7 +147,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                      max_len=args.max_code_len)
         model_inputs['is_gen'] = True
 
-    elif task == vars.TASK_SEARCH:
+    elif task == enums.TASK_SEARCH:
         pass
 
     return model_inputs
