@@ -75,7 +75,7 @@ if __name__ == '__main__':
     config_table.field_names = ["Configuration", "Value"]
     config_table.align["Configuration"] = "l"
     config_table.align["Value"] = "l"
-    for config, value in enums(main_args).items():
+    for config, value in vars(main_args).items():
         config_table.add_row([config, str(value)])
     logger.debug('Configurations:\n{}'.format(config_table))
 
