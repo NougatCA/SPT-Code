@@ -34,7 +34,7 @@ def run_translation(
 
     """
     logger.info('-' * 100)
-    logger.info(f'Code translation from {args.translation_source_language} to {args.translation_target_language0}')
+    logger.info(f'Code translation from {args.translation_source_language} to {args.translation_target_language}')
     # --------------------------------------------------
     # datasets
     # --------------------------------------------------
@@ -68,10 +68,11 @@ def run_translation(
     else:
         logger.info('Building vocabularies')
         code_vocab = Vocab(name=args.code_vocab_name, method=args.code_tokenize_method, vocab_size=args.code_vocab_size,
-                           datasets=[datasets['train'].codes], ignore_case=True, save_root=args.vocab_root)
+                           datasets=[datasets['train'].codes, datasets['train'].targets], ignore_case=True,
+                           save_root=args.vocab_root)
         ast_vocab = Vocab(name=args.ast_vocab_name, method='word', datasets=[datasets['train'].asts])
         nl_vocab = Vocab(name=args.nl_vocab_name, method=args.nl_tokenize_method, vocab_size=args.nl_vocab_size,
-                         datasets=[datasets['train'].nls], ignore_case=True, save_root=args.vocab_root)
+                         datasets=[datasets['train'].names], ignore_case=True, save_root=args.vocab_root)
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
     logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
     logger.info(f'The size of nl vocabulary: {len(nl_vocab)}')
