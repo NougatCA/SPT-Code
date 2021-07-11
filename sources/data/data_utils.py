@@ -474,12 +474,16 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
             - List of comment strings
 
     """
+    logger.info(f'    Source code file: {source_path}')
     sources = load_lines(source_path)
 
     if not os.path.isfile(code_path):
+        logger.info('    Tokenize source code')
         codes = [tokenize_source(source, lang=lang) for source in sources]
     else:
+        logger.info(f'    Tokenized code file: {code_path}')
         codes = load_lines(code_path)
+    logger.info(f'    Summarization file: {nl_path}')
     nls = load_lines(nl_path)
     assert len(sources) == len(codes) == len(nls)
 
@@ -487,7 +491,7 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
     new_nls = []
     names = []
     asts = []
-    for source, code, nl in zip(sources, codes, nls):
+    for source, code, nl in tqdm(zip(sources, codes, nls), desc='Parsing', leave=False):
         try:
             source = remove_comments_and_docstrings(source, lang=lang)
             ast, name = generate_single_ast_nl(source=source, lang=lang)
@@ -519,14 +523,16 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
             - List of tokenized target code strings
 
     """
+    logger.info(f'    Source file: {source_path}')
     sources = load_lines(source_path)
+    logger.info(f'    Target file: {target_path}')
     targets = load_lines(target_path)
 
     new_sources = []
     new_targets = []
     asts = []
     names = []
-    for source, target in zip(sources, targets):
+    for source, target in tqdm(zip(sources, targets), desc='Parsing', leave=False):
         try:
             source = remove_comments_and_docstrings(source, lang=source_lang)
             target = remove_comments_and_docstrings(target, lang=target_lang)
