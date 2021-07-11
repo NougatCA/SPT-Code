@@ -44,6 +44,7 @@ class CodeDataset(Dataset):
         # load fine-tuning dataset
         else:
             assert split
+            logger.info(f'  Loading {split} set')
             self.dataset_dir = os.path.join(self.dataset_dir, task)
             # code summarization
             if task == enums.TASK_SUMMARIZATION:
