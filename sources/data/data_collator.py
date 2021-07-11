@@ -186,6 +186,26 @@ def get_batch_inputs(batch: List[str], vocab: Vocab, processor=None, max_len=Non
 
 def get_concat_batch_inputs(code_raw, code_vocab, max_code_len, ast_raw, ast_vocab, max_ast_len,
                             nl_raw=None, nl_vocab=None, max_nl_len=None):
+    """
+    Return the concat tensor and mask for input.
+
+    Args:
+        code_raw:
+        code_vocab:
+        max_code_len:
+        ast_raw:
+        ast_vocab:
+        max_ast_len:
+        nl_raw:
+        nl_vocab:
+        max_nl_len:
+
+    Returns:
+        (torch.Tensor, torch.Tensor):
+            - Concat inputs
+            - concat attention mask
+
+    """
     code_vocab.tokenizer.post_processor = Vocab.sep_processor
     code_vocab.tokenizer.enable_truncation(max_length=max_code_len)
     code_encoded = code_vocab.encode_batch(code_raw, pad=False)
