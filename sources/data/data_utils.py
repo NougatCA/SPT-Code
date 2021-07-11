@@ -8,7 +8,7 @@ from tqdm import tqdm
 from antlr4 import InputStream
 import nltk
 
-from .asts.ast_parser import generate_single_ast_nl
+from .asts.ast_parser import generate_single_ast_nl, split_identifier
 import vars
 from utils.timer import Timer
 
@@ -155,25 +155,26 @@ def remove_comments_and_docstrings(source, lang):
         return '\n'.join(temp)
 
 
-def parse_json_file(file, lang, replace_method_name=False):
+def parse_json_file(file, lang):
     """
     Parse a dataset file where each line is a json string representing a sample.
 
     Args:
         file (str): The file path
         lang (str): Source code language
-        replace_method_name (bool): Whether to replace method names in codes, default to False
 
     Returns:
-        (list[str], list[str], list[str]):
+        (list[str], list[str], list[str], list[str]):
             - List of source codes
             - List of tokenized codes
             - List of split method names
+            - List of tokenized codes with method name replaced with ``f``
 
     """
     sources = []
     codes = []
     names = []
+    codes_wo_name = []
     with open(file, encoding='utf-8') as f:
         for line in f.readlines()[:100]:
             data = json.loads(line.strip())
@@ -182,14 +183,17 @@ def parse_json_file(file, lang, replace_method_name=False):
             source = remove_comments_and_docstrings(source, lang)
             source = replace_string_literal(source)
             code = replace_string_literal(' '.join(data['code_tokens']))
-            if replace_method_name:
-                code = code.replace(name, 'f', 1)
 
             sources.append(source)
             codes.append(code)
+
+            code_wo_name = code.replace(name, 'f', 1)
+            codes_wo_name.append(code_wo_name)
+
+            name = ' '.join(split_identifier(name))
             names.append(name)
 
-    return sources, codes, names
+    return sources, codes, names, codes_wo_name
 
 
 def find_all_files(base):
@@ -225,51 +229,55 @@ def iter_pre_train_dataset_files(lang_dir, lang):
     return []
 
 
-def load_pre_train_dataset(file, lang, replace_method_name=False):
+def load_pre_train_dataset(file, lang):
     """
     Load json dataset from given file.
 
     Args:
         file (str): Path of dataset file
         lang (str): Source code language
-        replace_method_name (bool): Whether to replace method name, default to False
 
     Returns:
-        (list[str], list[str], list[str]):
+        (list[str], list[str], list[str], list[str]):
             - List of source code strings
             - List of tokenized code strings
             - List of nl strings
+            - List of tokenized code strings with method names replaced
+
     """
     if lang in [vars.LANG_JAVA, vars.LANG_PYTHON, vars.LANG_GO, vars.LANG_JAVASCRIPT, vars.LANG_PHP, vars.LANG_RUBY]:
-        sources, codes, names = parse_json_file(file, lang=lang, replace_method_name=replace_method_name)
-        return sources, codes, names
+        sources, codes, names, codes_wo_name = parse_json_file(file, lang=lang)
+        return sources, codes, names, codes_wo_name
 
 
-def load_dataset_from_dir(dataset_dir, replace_method_name=False):
+def load_dataset_from_dir(dataset_dir):
     """
-    Load all files in the given dir
+    Load all files in the given dir, only for pre-training.
 
     Args:
         dataset_dir (str): Root directory
-        replace_method_name (bool): Whether to replace method names in ``all_codes``, default to False
 
     Returns:
-        (list[str], dict[str, int], list[str], list[str], List[str], list[str]):
+        (list[str], list[str], list[str], List[str], list[str], list[str], list[str], list[str]):
             - List of str: languages for each line
-            - Map the dir path to a list of filenames
             - List of str: source code
             - List of str: tokenized code string
             - List of ast: linearized ast string
             - List of str: split method name string
+            - List of str:
+            - List of str:
+            - List of str
 
     """
 
     languages = []
-    lang_lines = {}
     all_sources = []
     all_asts = []
     all_codes = []
+    all_codes_wo_name = []
     all_names = []
+    all_names_wo_name = []
+    all_only_names = []
     for file in os.listdir(dataset_dir):
 
         path = os.path.join(dataset_dir, file)
@@ -284,30 +292,40 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
             for dataset_file_path in dataset_files:
 
                 logger.info(f'    File: {dataset_file_path}')
-                sources, codes, names = load_pre_train_dataset(file=dataset_file_path,
-                                                               lang=lang,
-                                                               replace_method_name=replace_method_name)
+                sources, codes, names, codes_wo_name = load_pre_train_dataset(file=dataset_file_path,
+                                                                              lang=lang)
 
                 new_sources = []
                 new_codes = []
+                new_codes_wo_name = []
                 new_names = []
+                new_names_wo_name = []
+                only_names = []
                 asts = []
-                for source, code, name in tqdm(zip(sources, codes, names), desc='Parsing', leave=False):
+                for source, code, name, code_wo_name in tqdm(zip(sources, codes, names, codes_wo_name),
+                                                             desc='Parsing',
+                                                             leave=False):
                     try:
-                        ast, nl = generate_single_ast_nl(source=source,
-                                                         lang=lang,
-                                                         name=name,
-                                                         replace_method_name=replace_method_name)
+                        ast, nl, nl_wo_name = generate_single_ast_nl(source=source,
+                                                                     lang=lang,
+                                                                     name=name,
+                                                                     replace_method_name=True)
                         new_sources.append(source)
                         new_codes.append(code)
+                        new_codes_wo_name.append(code_wo_name)
                         new_names.append(nl)
+                        new_names_wo_name.append(nl_wo_name)
                         asts.append(ast)
+                        only_names.append(name)
                     except Exception:
                         continue
 
                 all_sources += new_sources
                 all_codes += new_codes
+                all_codes_wo_name += new_codes_wo_name
                 all_names += new_names
+                all_names_wo_name += new_names_wo_name
+                all_only_names += only_names
                 all_asts += asts
 
                 n_line = len(new_sources)
@@ -315,10 +333,10 @@ def load_dataset_from_dir(dataset_dir, replace_method_name=False):
                 n_sample += n_line
 
             logger.info(f'  {lang} dataset size: {n_sample}')
-            lang_lines.update({lang: n_sample})
 
-    assert len(languages) == len(all_sources) == len(all_codes) == len(all_asts)
-    return languages, lang_lines, all_sources, all_codes, all_asts, all_names
+    assert len(languages) == len(all_sources) == len(all_codes) == len(all_codes_wo_name) == len(all_asts) == \
+           len(all_names) == len(all_names_wo_name) == len(all_only_names)
+    return languages, all_sources, all_codes, all_asts, all_names, all_codes_wo_name, all_names_wo_name, all_only_names
 
 
 def trim_spaces(string):

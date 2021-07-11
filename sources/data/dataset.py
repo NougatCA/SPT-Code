@@ -6,7 +6,7 @@ import logging
 import re
 
 import vars
-from .data_utils import load_dataset_from_dir, generate_single_ast_nl, tokenize_source, align_source_code, \
+from .data_utils import load_dataset_from_dir, tokenize_source, align_source_code, \
     regular_tokenize, parse_for_summarization, parse_for_translation
 
 logger = logging.getLogger(__name__)
@@ -38,8 +38,8 @@ class CodeDataset(Dataset):
 
         # load pre-training dataset
         if self.mode == 'pre_train':
-            self.languages, self.lang_n_line, self.sources, self.codes, self.asts, self.names = load_dataset_from_dir(
-                dataset_dir=self.dataset_dir, replace_method_name=self.task == vars.TASK_METHOD_NAME_PREDICTION)
+            self.languages, self.sources, self.codes, self.asts, self.names, self.codes_wo_name, \
+                self.names_wo_name, self.only_names = load_dataset_from_dir(dataset_dir=self.dataset_dir)
             self.size = len(self.codes)
         # load fine-tuning dataset
         else:
@@ -128,7 +128,7 @@ class CodeDataset(Dataset):
             return former_code, self.asts[index], self.names[index], latter_code
         # mnp
         elif self.task == vars.TASK_METHOD_NAME_PREDICTION:
-            return self.codes[index], self.asts[index], self.names[index]
+            return self.codes_wo_name[index], self.asts[index], self.names_wo_name[index], self.names[index]
         # summarization
         elif self.task == vars.TASK_SUMMARIZATION:
             return self.codes[index], self.asts[index], self.names[index], self.nls[index]

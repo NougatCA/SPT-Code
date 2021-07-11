@@ -370,7 +370,7 @@ def extract_method_invocation(source, root, lang):
     return [get_node_name(source=source, node=capture[0], lang=lang) for capture in captures]
 
 
-def extract_nl_from_code(source, root, lang, name=None, remove_method_name=False):
+def extract_nl_from_code(source, root, lang, name=None, replace_method_name=False):
     """
     Extract nl tokens from given source code, including split name and method invocations.
 
@@ -379,26 +379,32 @@ def extract_nl_from_code(source, root, lang, name=None, remove_method_name=False
         root (tree_sitter.Node): Root of code
         lang (str): Source code language
         name (str): optional, name of method/function
-        remove_method_name (bool): Whether to remove method name
+        replace_method_name (bool): Whether to replace method name and returns a version that without names additionally
 
     Returns:
-        str: Nl string
+        Union[(str, str), str]:
+            - Nl string
+            - Nl string without method name
 
     """
     tokens = []
+    tokens_wo_name = []
 
-    if not remove_method_name:
-        if name is None:
-            name = get_method_name(source=source, root=root, lang=lang)
-        name_tokens = split_identifier(name)
-        tokens += name_tokens
+    if name is None:
+        name = get_method_name(source=source, root=root, lang=lang)
+    name_tokens = split_identifier(name)
+    tokens += name_tokens
 
     invocations = extract_method_invocation(source=source, root=root, lang=lang)
     for invocation in invocations:
         subtokens = split_identifier(invocation)
         tokens += subtokens
+        tokens_wo_name += subtokens
 
-    return ' '.join(tokens)
+    if replace_method_name:
+        return ' '.join(tokens), ' '.join(tokens_wo_name)
+    else:
+        return ' '.join(tokens)
 
 
 def generate_single_ast_nl(source, lang, name=None, replace_method_name=False):
@@ -409,22 +415,26 @@ def generate_single_ast_nl(source, lang, name=None, replace_method_name=False):
         source (str): Source code string
         lang (str): Source code language
         name (str): optional, name of method/function
-        replace_method_name (bool): Whether to remove method name
+        replace_method_name (bool): Whether to replace method name and returns a version that without names additionally
 
     Returns:
-        (str, str):
+        Union[(str, str), (str, str, str)]:
             - AST sequence in string
             - Nl sequence in string
 
     """
     tree = parse_ast(source=source, lang=lang)
     ast = generate_statement_xsbt(node=tree.root_node, lang=lang)
-    nl = extract_nl_from_code(source=source,
-                              root=tree.root_node,
-                              lang=lang,
-                              name=name,
-                              remove_method_name=replace_method_name)
-    return ast, nl
+    if replace_method_name:
+        nl, nl_wo_name = extract_nl_from_code(source=source,
+                                              root=tree.root_node,
+                                              lang=lang,
+                                              name=name,
+                                              replace_method_name=replace_method_name)
+        return ast, nl, nl_wo_name
+    else:
+        nl = extract_nl_from_code(source=source, root=tree.root_node, lang=lang, name=name)
+        return ast, nl
 
 
 def generate_asts_nls(sources, langs):

@@ -71,7 +71,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
     # mnp
     elif task == vars.TASK_METHOD_NAME_PREDICTION:
 
-        code_raw, ast_raw, name_raw = map(list, zip(*batch))
+        code_raw, ast_raw, nl_raw, name_raw = map(list, zip(*batch))
 
         model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(
                                                                                         code_raw=code_raw,
@@ -79,7 +79,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                                                         max_code_len=args.max_code_len,
                                                                                         ast_raw=ast_raw,
                                                                                         ast_vocab=ast_vocab,
-                                                                                        max_ast_len=args.max_ast_len)
+                                                                                        max_ast_len=args.max_ast_len,
+                                                                                        nl_raw=nl_raw,
+                                                                                        max_nl_len=args.max_nl_len)
 
         model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
                                                                                         batch=name_raw,

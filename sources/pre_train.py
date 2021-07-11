@@ -19,7 +19,7 @@ def pre_train(args, tasks=None):
 
     if tasks is None:
         # tasks = [vars.TASK_CODE_AST_PREDICTION, vars.TASK_NEXT_CODE_PREDICTION, vars.TASK_METHOD_NAME_PREDICTION]
-        tasks = [vars.TASK_NEXT_CODE_PREDICTION, vars.TASK_METHOD_NAME_PREDICTION]
+        tasks = [vars.TASK_METHOD_NAME_PREDICTION]
 
     logger.info('*' * 100)
     logger.info('Initializing pre-training environments')
@@ -60,7 +60,7 @@ def pre_train(args, tasks=None):
     logger.info('-' * 100)
     logger.info('Building model')
     config = BartConfig(vocab_size=len(code_vocab) + len(ast_vocab) + len(nl_vocab),
-                        max_position_embeddings=1024,
+                        max_position_embeddings=512,
                         encoder_layers=args.n_layer,
                         encoder_ffn_dim=args.d_ff,
                         encoder_attention_heads=args.n_head,
