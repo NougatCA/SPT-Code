@@ -10,7 +10,6 @@ import nltk
 
 from .asts.ast_parser import generate_single_ast_nl, split_identifier
 import enums
-from utils.timer import Timer
 
 from data.antlr_parsers.go.GoLexer import GoLexer
 from data.antlr_parsers.java.Java8Lexer import Java8Lexer
@@ -176,7 +175,7 @@ def parse_json_file(file, lang):
     names = []
     codes_wo_name = []
     with open(file, encoding='utf-8') as f:
-        for line in f.readlines()[:100]:
+        for line in f.readlines():
             data = json.loads(line.strip())
             name = trim_method_name(data['func_name'])
             source = data['code'].strip()
@@ -196,7 +195,7 @@ def parse_json_file(file, lang):
     return sources, codes, names, codes_wo_name
 
 
-def find_all_files(base):
+def iter_all_files(base):
     """
     Iterator for all file paths in the given base path.
 
@@ -225,7 +224,7 @@ def iter_pre_train_dataset_files(lang_dir, lang):
     """
     if lang in [enums.LANG_GO, enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_JAVASCRIPT, enums.LANG_PHP, enums.LANG_RUBY]:
     # if lang in [vars.LANG_JAVASCRIPT]:
-        return [file for file in find_all_files(base=lang_dir) if file.endswith('.jsonl')]
+        return [file for file in iter_all_files(base=lang_dir) if file.endswith('.jsonl')]
     return []
 
 
@@ -485,6 +484,7 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
         codes = load_lines(code_path)
     logger.info(f'    Summarization file: {nl_path}')
     nls = load_lines(nl_path)
+    # sources, codes, nls = sources[:5000], codes[:5000], nls[:5000]
     assert len(sources) == len(codes) == len(nls)
 
     new_codes = []
@@ -548,3 +548,18 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
         except Exception:
             continue
     return new_sources, asts, names, new_targets
+
+
+def parse_for_search(dataset_dir):
+    """
+    Load and parse for code search.
+
+    Args:
+        dataset_dir (str): Directory of the dataset
+
+    Returns:
+
+    """
+    for file in iter_all_files(dataset_dir):
+        if not file.endswith('.jsonl'):
+            continue
