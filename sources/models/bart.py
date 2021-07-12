@@ -176,7 +176,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             encoder_attentions=outputs.encoder_attentions,
         )
 
-    def forward_cls(
+    def forward_logits(
             self,
             input_ids=None,
             attention_mask=None,
@@ -193,16 +193,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             use_cache=None,
             output_attentions=None,
             output_hidden_states=None,
-            return_dict=None
-    ):
-        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        if labels is not None:
-            use_cache = False
-
-        if input_ids is None and inputs_embeds is not None:
-            raise NotImplementedError(
-                f"Passing input embeddings is currently not supported for {self.__class__.__name__}"
-            )
+            return_dict=None):
 
         outputs = self.model(
             input_ids,
@@ -231,6 +222,79 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                                   :, -1, :
                                   ]
         logits = self.classification_head(sentence_representation)
+        return logits, outputs
+
+    def forward_cls(
+            self,
+            input_ids=None,
+            attention_mask=None,
+            decoder_input_ids=None,
+            decoder_attention_mask=None,
+            head_mask=None,
+            decoder_head_mask=None,
+            cross_attn_head_mask=None,
+            encoder_outputs=None,
+            past_key_values=None,
+            inputs_embeds=None,
+            decoder_inputs_embeds=None,
+            labels=None,
+            use_cache=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None
+    ):
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        if labels is not None:
+            use_cache = False
+
+        if input_ids is None and inputs_embeds is not None:
+            raise NotImplementedError(
+                f"Passing input embeddings is currently not supported for {self.__class__.__name__}"
+            )
+
+        # outputs = self.model(
+        #     input_ids,
+        #     attention_mask=attention_mask,
+        #     decoder_input_ids=decoder_input_ids,
+        #     decoder_attention_mask=decoder_attention_mask,
+        #     head_mask=head_mask,
+        #     decoder_head_mask=decoder_head_mask,
+        #     cross_attn_head_mask=cross_attn_head_mask,
+        #     encoder_outputs=encoder_outputs,
+        #     inputs_embeds=inputs_embeds,
+        #     decoder_inputs_embeds=decoder_inputs_embeds,
+        #     use_cache=use_cache,
+        #     output_attentions=output_attentions,
+        #     output_hidden_states=output_hidden_states,
+        #     return_dict=return_dict,
+        # )
+        # hidden_states = outputs[0]  # last hidden state
+        #
+        # eos_mask = input_ids.eq(self.config.eos_token_id)
+        #
+        # if len(torch.unique(eos_mask.sum(1))) > 1:
+        #     raise ValueError("All examples must have the same number of <eos> tokens.")
+        # sentence_representation = hidden_states[eos_mask, :].view(hidden_states.size(0), -1,
+        #                                                           hidden_states.size(-1))[
+        #                           :, -1, :
+        #                           ]
+        # logits = self.classification_head(sentence_representation)
+        logits, outputs = self.forward_logits(input_ids=input_ids,
+                                              attention_mask=attention_mask,
+                                              decoder_input_ids=decoder_input_ids,
+                                              decoder_attention_mask=decoder_attention_mask,
+                                              head_mask=head_mask,
+                                              decoder_head_mask=decoder_head_mask,
+                                              cross_attn_head_mask=cross_attn_head_mask,
+                                              encoder_outputs=encoder_outputs,
+                                              past_key_values=past_key_values,
+                                              inputs_embeds=inputs_embeds,
+                                              decoder_inputs_embeds=decoder_inputs_embeds,
+                                              labels=labels,
+                                              use_cache=use_cache,
+                                              output_attentions=output_attentions,
+                                              output_hidden_states=output_hidden_states,
+                                              return_dict=return_dict)
 
         loss = None
         if labels is not None:
@@ -277,4 +341,39 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             output_hidden_states=None,
             return_dict=None
     ):
-        pass
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        code_logits, code_outputs = self.forward_logits(input_ids=input_ids,
+                                                        attention_mask=attention_mask,
+                                                        decoder_input_ids=None,
+                                                        decoder_attention_mask=decoder_attention_mask,
+                                                        head_mask=head_mask,
+                                                        decoder_head_mask=decoder_head_mask,
+                                                        cross_attn_head_mask=cross_attn_head_mask,
+                                                        encoder_outputs=encoder_outputs,
+                                                        past_key_values=past_key_values,
+                                                        inputs_embeds=inputs_embeds,
+                                                        decoder_inputs_embeds=None,
+                                                        labels=None,
+                                                        use_cache=use_cache,
+                                                        output_attentions=output_attentions,
+                                                        output_hidden_states=output_hidden_states,
+                                                        return_dict=return_dict)
+        nl_logits, nl_outputs = self.forward_logits(input_ids=decoder_input_ids,
+                                                    attention_mask=decoder_attention_mask,
+                                                    decoder_input_ids=None,
+                                                    decoder_attention_mask=None,
+                                                    head_mask=head_mask,
+                                                    decoder_head_mask=decoder_head_mask,
+                                                    cross_attn_head_mask=cross_attn_head_mask,
+                                                    encoder_outputs=encoder_outputs,
+                                                    past_key_values=past_key_values,
+                                                    inputs_embeds=inputs_embeds,
+                                                    decoder_inputs_embeds=None,
+                                                    labels=None,
+                                                    use_cache=use_cache,
+                                                    output_attentions=output_attentions,
+                                                    output_hidden_states=output_hidden_states,
+                                                    return_dict=return_dict)
+
+
