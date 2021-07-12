@@ -98,6 +98,9 @@ def pre_train(args, tasks=None):
         dataset.set_task(task)
 
         if task == enums.TASK_CODE_AST_PREDICTION:
+            # set model mode
+            logger.info('-' * 100)
+            model.set_model_mode(enums.BART_CLS)
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -145,13 +148,14 @@ def pre_train(args, tasks=None):
             # --------------------------------------------------
             logger.info('-' * 100)
             logger.info('Start pre-training task: CAP')
-            # model device
-            logger.info('Device: {}'.format(next(model.parameters()).device))
             cap_result = trainer.train()
             logger.info(f'Pre-training task CAP finished')
             trainer.save_model(os.path.join(args.model_root, 'cap'))
 
         elif task == enums.TASK_NEXT_CODE_PREDICTION:
+            # set model mode
+            logger.info('-' * 100)
+            model.set_model_mode(enums.BART_GEN)
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -206,6 +210,9 @@ def pre_train(args, tasks=None):
             trainer.save_model(os.path.join(args.model_root, 'ncp'))
 
         elif task == enums.TASK_METHOD_NAME_PREDICTION:
+            # set model mode
+            logger.info('-' * 100)
+            model.set_model_mode(enums.BART_GEN)
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
