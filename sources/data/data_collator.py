@@ -41,7 +41,6 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                                                         nl_vocab=nl_vocab,
                                                                                         max_nl_len=args.max_nl_len)
         model_inputs['labels'] = torch.tensor([[a] for a in is_ast], dtype=torch.long)
-        model_inputs['is_cls'] = True
     # ncp
     elif task == enums.TASK_NEXT_CODE_PREDICTION:
 
@@ -67,7 +66,6 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                      vocab=code_vocab,
                                                      processor=Vocab.eos_processor,
                                                      max_len=args.next_code_prediction_max_len)
-        model_inputs['is_gen'] = True
     # mnp
     elif task == enums.TASK_METHOD_NAME_PREDICTION:
 
@@ -93,7 +91,6 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                      vocab=nl_vocab,
                                                      processor=Vocab.eos_processor,
                                                      max_len=args.max_nl_len)
-        model_inputs['is_gen'] = True
 
     elif task == enums.TASK_SUMMARIZATION:
 
@@ -119,7 +116,6 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                      vocab=nl_vocab,
                                                      processor=Vocab.eos_processor,
                                                      max_len=args.max_nl_len)
-        model_inputs['is_gen'] = True
 
     elif task == enums.TASK_TRANSLATION:
 
@@ -145,7 +141,6 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                                                      vocab=code_vocab,
                                                      processor=Vocab.eos_processor,
                                                      max_len=args.max_code_len)
-        model_inputs['is_gen'] = True
 
     elif task == enums.TASK_SEARCH:
         pass
