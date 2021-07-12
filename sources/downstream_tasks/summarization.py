@@ -12,6 +12,7 @@ from utils.general import count_params, human_format, layer_wise_parameters
 from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics
 from utils.callbacks import LogStateCallBack
 from utils.trainer import CodeTrainer
+import enums
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ def run_summarization(
     for split in splits:
         datasets[split] = CodeDataset(args=args,
                                       mode='fine_tune',
-                                      task='summarization',
+                                      task=enums.TASK_SUMMARIZATION,
                                       language=args.summarization_language,
                                       split=split)
         logger.info(f'The size of {split} set: {len(datasets[split])}')
@@ -114,7 +115,7 @@ def run_summarization(
                             min_length=1,
                             num_beams=args.beam_width,
                             num_labels=2)
-        model = BartForClassificationAndGeneration(config)
+        model = BartForClassificationAndGeneration(config, mode=enums.BART_GEN)
     # log model statistic
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
     table = layer_wise_parameters(model)
@@ -205,8 +206,6 @@ def run_summarization(
     if not only_test:
         logger.info('-' * 100)
         logger.info('Start training')
-        # model device
-        logger.info('Device: {}'.format(next(model.parameters()).device))
         train_result = trainer.train()
         logger.info('Training finished')
         trainer.save_model(args.model_root)

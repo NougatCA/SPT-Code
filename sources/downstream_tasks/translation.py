@@ -5,6 +5,7 @@ import logging
 from typing import Union, Tuple
 import os
 
+import enums
 from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab
 from data.dataset import CodeDataset
@@ -115,7 +116,7 @@ def run_translation(
                             min_length=1,
                             num_beams=args.beam_width,
                             num_labels=2)
-        model = BartForClassificationAndGeneration(config)
+        model = BartForClassificationAndGeneration(config, mode=enums.BART_GEN)
     # log model statistic
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
     table = layer_wise_parameters(model)
@@ -206,8 +207,6 @@ def run_translation(
     if not only_test:
         logger.info('-' * 100)
         logger.info('Start training')
-        # model device
-        logger.info('Device: {}'.format(next(model.parameters()).device))
         train_result = trainer.train()
         logger.info('Training finished')
         trainer.save_model(args.model_root)
