@@ -17,3 +17,8 @@ LANG_PHP = 'php'
 LANG_JAVASCRIPT = 'javascript'
 LANG_RUBY = 'ruby'
 LANG_C_SHARP = 'c_sharp'
+
+# BART model mode
+BART_CLS = 'bart_cls'
+BART_GEN = 'bart_gen'
+BART_SEARCH = 'bart_search'
