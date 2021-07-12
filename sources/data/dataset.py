@@ -7,7 +7,7 @@ import re
 
 import enums
 from .data_utils import load_dataset_from_dir, tokenize_source, align_source_code, \
-    regular_tokenize, parse_for_summarization, parse_for_translation
+    regular_tokenize, parse_for_summarization, parse_for_translation, parse_for_search
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,6 @@ class CodeDataset(Dataset):
                                                                                       code_path=self.code_path,
                                                                                       nl_path=self.nl_path,
                                                                                       lang=language)
-
                 assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
                 self.size = len(self.codes)
             # code translation
@@ -81,9 +80,14 @@ class CodeDataset(Dataset):
 
                 assert len(self.codes) == len(self.asts) == len(self.names) == len(self.targets)
                 self.size = len(self.codes)
-
+            # code search
             elif task == enums.TASK_SEARCH:
-                pass
+                assert language, '``Language`` must be specific if downstream task is code search'
+                self.dataset_dir = os.path.join(self.dataset_dir, language, split)
+
+                self.codes, self.asts, self.names, self.nls = parse_for_search(self.dataset_dir, lang=language)
+                assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
+                self.size = len(self.codes)
 
     def __getitem__(self, index):
         # cap
@@ -138,7 +142,7 @@ class CodeDataset(Dataset):
             return self.codes[index], self.asts[index], self.names[index], self.targets[index]
         # search
         elif self.task == enums.TASK_SEARCH:
-            pass
+            return self.codes[index], self.asts[index], self.names[index], self.nls[index]
 
     def __len__(self):
         return self.size

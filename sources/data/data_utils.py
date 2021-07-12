@@ -494,6 +494,7 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
     for source, code, nl in tqdm(zip(sources, codes, nls), desc='Parsing', leave=False):
         try:
             source = remove_comments_and_docstrings(source, lang=lang)
+            source = replace_string_literal(source)
             ast, name = generate_single_ast_nl(source=source, lang=lang)
             new_codes.append(code)
             new_nls.append(nl)
@@ -535,7 +536,9 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
     for source, target in tqdm(zip(sources, targets), desc='Parsing', leave=False):
         try:
             source = remove_comments_and_docstrings(source, lang=source_lang)
+            source = replace_string_literal(source)
             target = remove_comments_and_docstrings(target, lang=target_lang)
+            target = replace_string_literal(target)
 
             ast, name = generate_single_ast_nl(source=source, lang=source_lang)
             code = tokenize_source(source=source, lang=source_lang)
@@ -550,16 +553,52 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
     return new_sources, asts, names, new_targets
 
 
-def parse_for_search(dataset_dir):
+def parse_for_search(dataset_dir, lang):
     """
     Load and parse for code search.
 
     Args:
         dataset_dir (str): Directory of the dataset
+        lang (str): Source code language
 
     Returns:
+        (list[str], list[str], list[str], list[str])
+            - List of tokenized code strings
+            - List of AST sequences
+            - List of name strings
+            - List of nl strings
 
     """
+    codes = []
+    asts = []
+    names = []
+    nls = []
     for file in iter_all_files(dataset_dir):
         if not file.endswith('.jsonl'):
             continue
+        with open(file, encoding='utf-8') as f:
+            logger.info(f'  File: {file}')
+            for line in tqdm(f.readlines()):
+                data = json.loads(line.strip())
+                if 'docstring_tokens' not in data:
+                    continue
+                try:
+                    code = replace_string_literal(' '.join(data['code_tokens']))
+                    name = trim_method_name(data['func_name'])
+
+                    source = data['code'].strip()
+                    source = remove_comments_and_docstrings(source, lang)
+                    source = replace_string_literal(source)
+                    ast, name = generate_single_ast_nl(source=source, lang=lang, name=name)
+
+                    nl = ' '.join(data['docstring_tokens'])
+
+                    codes.append(code)
+                    asts.append(ast)
+                    name = ' '.join(split_identifier(name))
+                    names.append(name)
+                    nls.append(nl)
+                except Exception:
+                    continue
+
+        return codes, asts, names, nls
