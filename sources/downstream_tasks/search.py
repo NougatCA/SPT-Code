@@ -35,7 +35,7 @@ def run_search(
 
     """
     logger.info('-' * 100)
-    logger.info(f'Code search on language: {args.summarization_language}')
+    logger.info(f'Code search on language: {args.search_language}')
     # --------------------------------------------------
     # datasets
     # --------------------------------------------------
@@ -46,8 +46,8 @@ def run_search(
     for split in splits:
         datasets[split] = CodeDataset(args=args,
                                       mode='fine_tune',
-                                      task='summarization',
-                                      language=args.summarization_language,
+                                      task=enums.TASK_SEARCH,
+                                      language=args.search_language,
                                       split=split)
         logger.info(f'The size of {split} set: {len(datasets[split])}')
     logger.info('Datasets loaded successfully')
@@ -152,12 +152,12 @@ def run_search(
         result.update(avg_ir_metrics(references=refs, candidates=cans))
         return result
 
-    training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, 'summarization'),
+    training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_SEARCH),
                                              overwrite_output_dir=True,
                                              do_train=True,
-                                             do_eval=True,
-                                             do_predict=True,
-                                             evaluation_strategy=IntervalStrategy.EPOCH,
+                                             do_eval=False,
+                                             do_predict=False,
+                                             evaluation_strategy=IntervalStrategy.NO,
                                              prediction_loss_only=False,
                                              per_device_train_batch_size=args.batch_size,
                                              per_device_eval_batch_size=args.eval_batch_size,
@@ -168,7 +168,7 @@ def run_search(
                                              num_train_epochs=args.n_epoch,
                                              lr_scheduler_type=SchedulerType.LINEAR,
                                              warmup_steps=args.warmup_steps,
-                                             logging_dir=os.path.join(args.tensor_board_root, 'summarization'),
+                                             logging_dir=os.path.join(args.tensor_board_root, enums.TASK_SEARCH),
                                              logging_strategy=IntervalStrategy.STEPS,
                                              logging_steps=args.tensor_board_logging_steps,
                                              save_strategy=IntervalStrategy.EPOCH,
@@ -186,7 +186,7 @@ def run_search(
                           code_vocab=code_vocab,
                           ast_vocab=ast_vocab,
                           nl_vocab=nl_vocab,
-                          task='summarization',
+                          task=enums.TASK_SEARCH,
                           model=model,
                           args=training_args,
                           data_collator=None,
@@ -214,16 +214,16 @@ def run_search(
         trainer.log_metrics(split='train', metrics=metrics)
         trainer.save_metrics(split='train', metrics=metrics)
 
-        # --------------------------------------------------
-        # eval
-        # --------------------------------------------------
-        logger.info('-' * 100)
-        logger.info('Start evaluating')
-        eval_metrics = trainer.evaluate(metric_key_prefix='valid',
-                                        max_length=args.max_decode_step,
-                                        num_beams=args.beam_width)
-        trainer.log_metrics(split='valid', metrics=eval_metrics)
-        trainer.save_metrics(split='valid', metrics=eval_metrics)
+        # # --------------------------------------------------
+        # # eval
+        # # --------------------------------------------------
+        # logger.info('-' * 100)
+        # logger.info('Start evaluating')
+        # eval_metrics = trainer.evaluate(metric_key_prefix='valid',
+        #                                 max_length=args.max_decode_step,
+        #                                 num_beams=args.beam_width)
+        # trainer.log_metrics(split='valid', metrics=eval_metrics)
+        # trainer.save_metrics(split='valid', metrics=eval_metrics)
 
     # --------------------------------------------------
     # predict
@@ -231,6 +231,7 @@ def run_search(
     logger.info('-' * 100)
     logger.info('Start testing')
     trainer.compute_metrics = compute_test_metrics
+    model.set_model_mode(enums.BART_CLS)
     predict_results = trainer.predict(test_dataset=datasets['test'],
                                       metric_key_prefix='test',
                                       max_length=args.max_decode_step,
