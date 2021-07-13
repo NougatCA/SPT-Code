@@ -25,16 +25,16 @@ class Vocab(object):
     EOS_TOKEN = '[EOS]'     # end of sequence
     UNK_TOKEN = '[UNK]'     # unknown token
     MSK_TOKEN = '[MSK]'     # mask token
-    SEP_TOKEN = '[SEP]'     # sentence separator token
+    # SEP_TOKEN = '[SEP]'     # sentence separator token
     # CLS_TOKEN = '[CLS]'     # classification placeholder
 
     # default special symbols, if need additional symbols, use init parameter 'additional_special_symbols'
-    START_VOCAB = [PAD_TOKEN, SOS_TOKEN, EOS_TOKEN, UNK_TOKEN, MSK_TOKEN, SEP_TOKEN]
+    START_VOCAB = [PAD_TOKEN, SOS_TOKEN, EOS_TOKEN, UNK_TOKEN, MSK_TOKEN]
 
     # post-processors
     # bert processor: add SOS at the beginning and SEP at the end of sequence
-    bert_processor = BertProcessing(sep=(SEP_TOKEN, START_VOCAB.index(EOS_TOKEN)),
-                                    cls=(SOS_TOKEN, START_VOCAB.index(SOS_TOKEN)))
+    # bert_processor = BertProcessing(sep=(SEP_TOKEN, START_VOCAB.index(EOS_TOKEN)),
+    #                                 cls=(SOS_TOKEN, START_VOCAB.index(SOS_TOKEN)))
     # sos processor: add SOS at the beginning of sequence
     sos_processor = TemplateProcessing(single=f'{SOS_TOKEN} $', pair=f'{SOS_TOKEN} $A $B',
                                        special_tokens=[(SOS_TOKEN, START_VOCAB.index(SOS_TOKEN))])
@@ -42,11 +42,20 @@ class Vocab(object):
     eos_processor = TemplateProcessing(single=f'$ {EOS_TOKEN}', pair=f'$A $B {EOS_TOKEN}',
                                        special_tokens=[(EOS_TOKEN, START_VOCAB.index(EOS_TOKEN))])
     # sep processor: add SEP at the end of sequence
-    sep_processor = TemplateProcessing(single=f'$ {SEP_TOKEN}', pair=f'$A $B {SEP_TOKEN}',
-                                       special_tokens=[(SEP_TOKEN, START_VOCAB.index(SEP_TOKEN))])
+    # sep_processor = TemplateProcessing(single=f'$ {SEP_TOKEN}', pair=f'$A $B {SEP_TOKEN}',
+    #                                    special_tokens=[(SEP_TOKEN, START_VOCAB.index(SEP_TOKEN))])
 
-    def __init__(self, name, method, vocab_size=None, datasets: Union[List[str], List[List[str]]] = None,
-                 additional_special_symbols=None, ignore_case=False, save_root=None):
+    def __init__(
+            self,
+            name,
+            method,
+            vocab_size=None,
+            datasets: Union[List[str], List[List[str]]] = None,
+            additional_special_symbols=None,
+            ignore_case=False,
+            save_root=None,
+            index_offset=None,
+    ):
         """
         Initialize a vocabulary and train the tokenizer.
 
@@ -58,6 +67,7 @@ class Vocab(object):
             additional_special_symbols (list[str]): Optional, list of custom special symbols
             ignore_case (bool): Ignore cases if True, default False
             save_root (str): Optional, if given, save to the given root
+            index_offset (int): Optional, the index offset when encoding and decoding.
 
         """
         assert method in ['word', 'bpe'], \
@@ -69,6 +79,11 @@ class Vocab(object):
         if additional_special_symbols:
             self.add_special_symbols(additional_special_symbols)
         self.ignore_case = ignore_case
+
+        if index_offset is not None and index_offset != 0:
+            self.index_offset = index_offset
+        else:
+            self.index_offset = None
 
         # tokenizer and trainer
         if method == 'word':
@@ -130,6 +145,8 @@ class Vocab(object):
         if self.ignore_case:
             token = token.lower()
         index = self.tokenizer.token_to_id(token)
+        if self.index_offset and token not in self.__special_symbols:
+            index += self.index_offset
         return index if index else self.tokenizer.token_to_id(Vocab.UNK_TOKEN)
 
     def get_token(self, index: int) -> str:
@@ -143,8 +160,45 @@ class Vocab(object):
             str: Token of the given index
 
         """
+        if self.index_offset:
+            if index >= (len(self.__special_symbols) + self.index_offset):
+                index -= self.index_offset
+            elif len(self.__special_symbols) <= index < (len(self.__special_symbols) + self.index_offset):
+                index = self.get_unk_index()
         token = self.tokenizer.id_to_token(index)
         return token if token else Vocab.UNK_TOKEN
+
+    def transfer_index(self, index):
+        """
+        Return the transferred index based on the index offset
+
+        Args:
+            index (int): Index to transfer
+
+        Returns:
+            int: Transferred index
+
+        """
+        if not self.index_offset or index < len(self.__special_symbols):
+            return index
+        return index + self.index_offset
+
+    def restore_index(self, index):
+        """
+        Return the restored index based on the base index
+
+        Args:
+            index (int): Index to restore
+
+        Returns:
+            int: Restored index
+
+        """
+        if not self.index_offset or index < len(self.__special_symbols):
+            return index
+        if index < self.index_offset:
+            return self.get_unk_index()
+        return index - self.index_offset
 
     def encode_sequence(self, sequence: Union[str, List[str]], is_pre_tokenized=False):
         """
@@ -157,12 +211,14 @@ class Vocab(object):
             is_pre_tokenized (bool): Whether the input is already pre-tokenized
 
         Returns:
-            tokenizers.Encoding: Encoding instance
+            list[int], list[int]: indices and mask for sequence
 
         """
         if self.ignore_case:
             sequence = sequence.lower()
-        return self.tokenizer.encode(sequence=sequence, is_pretokenized=is_pre_tokenized)
+        encoded = self.tokenizer.encode(sequence=sequence, is_pretokenized=is_pre_tokenized)
+        ids = [self.transfer_index(index) for index in encoded.ids]
+        return ids, encoded.attention_mask
 
     def encode_batch(self, batch: Union[List[str], List[List[str]]], is_pre_tokenized=False,
                      pad=False, max_length=None):
@@ -178,7 +234,9 @@ class Vocab(object):
             max_length (int): The length to padding
 
         Returns:
-            List[tokenizers.Encoding]: List of encoding instances
+            (list[list[int]], list[list[int]]):
+                - encoded batch of indices
+                - encoded batch of attention masks
 
         """
         if self.ignore_case:
@@ -188,7 +246,10 @@ class Vocab(object):
             self.tokenizer.enable_padding(length=max_length)
         else:
             self.tokenizer.no_padding()
-        return self.tokenizer.encode_batch(input=batch, is_pretokenized=is_pre_tokenized)
+        encoded_batch = self.tokenizer.encode_batch(input=batch, is_pretokenized=is_pre_tokenized)
+        ids = [[self.transfer_index(index) for index in encoded.ids] for encoded in encoded_batch]
+        attention_mask = [encoded.attention_mask for encoded in encoded_batch]
+        return ids, attention_mask
 
     def decode(self, ids: List[int], skip_special_tokens=True) -> str:
         """
@@ -203,9 +264,11 @@ class Vocab(object):
             str: The decoded string
 
         """
+        if self.index_offset:
+            ids = [self.restore_index(index) for index in ids]
         return self.tokenizer.decode(ids=ids, skip_special_tokens=skip_special_tokens)
 
-    def decode_batch(self, batch: List[List[str]], skip_special_tokens=True) -> List[str]:
+    def decode_batch(self, batch: List[List[int]], skip_special_tokens=True) -> List[str]:
         """
         Decode a batch of ids back to their corresponding string.
 
@@ -218,6 +281,8 @@ class Vocab(object):
             list[str]: The list of decoded string
 
         """
+        if self.index_offset:
+            batch = [[self.restore_index(index) for index in seq] for seq in batch]
         return self.tokenizer.decode_batch(sequences=batch, skip_special_tokens=skip_special_tokens)
 
     def get_pad_index(self):
@@ -300,13 +365,3 @@ def load_vocab(vocab_root, name) -> Vocab:
         obj = pickle.load(f)
     assert isinstance(obj, Vocab)
     return obj
-
-
-def transfer_vocab_index(ids, vocab, base):
-    new_ids = []
-    for index in ids:
-        if index < vocab.num_special_token():
-            new_ids.append(index)
-        else:
-            new_ids.append(index + base)
-    return new_ids
