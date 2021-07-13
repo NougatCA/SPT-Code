@@ -115,8 +115,8 @@ def avg_bleu(references, candidates):
         candidates (list): list of candidates, each candidate should be tokenized into a list of tokens
 
     Returns:
-        float:
-            - average sentence_bleu score
+        float: average sentence_bleu score
+
     """
     total_score = 0.0
 
