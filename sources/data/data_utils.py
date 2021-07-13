@@ -484,8 +484,10 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
         codes = load_lines(code_path)
     logger.info(f'    Summarization file: {nl_path}')
     nls = load_lines(nl_path)
-    # sources, codes, nls = sources[:5000], codes[:5000], nls[:5000]
+    # sources, codes, nls = sources[:1000], codes[:1000], nls[:1000]
     assert len(sources) == len(codes) == len(nls)
+
+    return codes, None, None, nls
 
     new_codes = []
     new_nls = []
@@ -494,7 +496,6 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
     for source, code, nl in tqdm(zip(sources, codes, nls), desc='Parsing', leave=False):
         try:
             source = remove_comments_and_docstrings(source, lang=lang)
-            source = replace_string_literal(source)
             ast, name = generate_single_ast_nl(source=source, lang=lang)
             new_codes.append(code)
             new_nls.append(nl)
