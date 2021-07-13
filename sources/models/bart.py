@@ -2,10 +2,13 @@ import logging
 
 import torch
 from torch.nn import CrossEntropyLoss, MSELoss
+import torch.nn.functional as f
 
 from transformers import BartForConditionalGeneration, BartConfig
 from transformers.models.bart.modeling_bart import BartClassificationHead, shift_tokens_right
 from transformers.modeling_outputs import Seq2SeqLMOutput, Seq2SeqSequenceClassifierOutput
+
+from tqdm import tqdm
 
 import enums
 
@@ -52,7 +55,8 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             use_cache=None,
             output_attentions=None,
             output_hidden_states=None,
-            return_dict=None
+            return_dict=None,
+            **kwargs
     ):
         assert self.mode, 'It is required to specific a mode for BART before the model is passed through'
 
@@ -71,7 +75,8 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                                        use_cache=use_cache,
                                        output_attentions=output_attentions,
                                        output_hidden_states=output_hidden_states,
-                                       return_dict=return_dict)
+                                       return_dict=return_dict,
+                                       **kwargs)
 
         elif self.mode == enums.BART_GEN:
             return self.forward_gen(input_ids=input_ids,
@@ -339,41 +344,80 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             use_cache=None,
             output_attentions=None,
             output_hidden_states=None,
-            return_dict=None
+            return_dict=None,
+            neg_nl_input_ids=None,
+            neg_nl_attention_mask=None
     ):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
         code_logits, code_outputs = self.forward_logits(input_ids=input_ids,
                                                         attention_mask=attention_mask,
-                                                        decoder_input_ids=None,
-                                                        decoder_attention_mask=decoder_attention_mask,
-                                                        head_mask=head_mask,
-                                                        decoder_head_mask=decoder_head_mask,
-                                                        cross_attn_head_mask=cross_attn_head_mask,
-                                                        encoder_outputs=encoder_outputs,
-                                                        past_key_values=past_key_values,
-                                                        inputs_embeds=inputs_embeds,
-                                                        decoder_inputs_embeds=None,
-                                                        labels=None,
+                                                        # decoder_input_ids=None,
+                                                        # decoder_attention_mask=decoder_attention_mask,
+                                                        # head_mask=head_mask,
+                                                        # decoder_head_mask=decoder_head_mask,
+                                                        # cross_attn_head_mask=cross_attn_head_mask,
+                                                        # encoder_outputs=encoder_outputs,
+                                                        # past_key_values=past_key_values,
+                                                        # inputs_embeds=inputs_embeds,
+                                                        # decoder_inputs_embeds=None,
+                                                        # labels=None,
                                                         use_cache=use_cache,
-                                                        output_attentions=output_attentions,
-                                                        output_hidden_states=output_hidden_states,
+                                                        # output_attentions=output_attentions,
+                                                        # output_hidden_states=output_hidden_states,
                                                         return_dict=return_dict)
         nl_logits, nl_outputs = self.forward_logits(input_ids=decoder_input_ids,
                                                     attention_mask=decoder_attention_mask,
-                                                    decoder_input_ids=None,
-                                                    decoder_attention_mask=None,
-                                                    head_mask=head_mask,
-                                                    decoder_head_mask=decoder_head_mask,
-                                                    cross_attn_head_mask=cross_attn_head_mask,
-                                                    encoder_outputs=encoder_outputs,
-                                                    past_key_values=past_key_values,
-                                                    inputs_embeds=inputs_embeds,
-                                                    decoder_inputs_embeds=None,
-                                                    labels=None,
+                                                    # decoder_input_ids=None,
+                                                    # decoder_attention_mask=None,
+                                                    # head_mask=head_mask,
+                                                    # decoder_head_mask=decoder_head_mask,
+                                                    # cross_attn_head_mask=cross_attn_head_mask,
+                                                    # encoder_outputs=encoder_outputs,
+                                                    # past_key_values=past_key_values,
+                                                    # inputs_embeds=inputs_embeds,
+                                                    # decoder_inputs_embeds=None,
+                                                    # labels=None,
                                                     use_cache=use_cache,
-                                                    output_attentions=output_attentions,
-                                                    output_hidden_states=output_hidden_states,
+                                                    # output_attentions=output_attentions,
+                                                    # output_hidden_states=output_hidden_states,
                                                     return_dict=return_dict)
+
+        neg_nl_logits, neg_nl_outputs = self.forward_logits(input_ids=neg_nl_input_ids,
+                                                            attention_mask=neg_nl_attention_mask,
+                                                            use_cache=use_cache,
+                                                            return_dict=return_dict)
+
+        pos_sim = f.cosine_similarity(code_logits, nl_logits)
+        neg_sim = f.cosine_similarity(code_logits, neg_nl_logits)
+
+        loss = (0.413 - pos_sim + neg_sim).clamp(min=1e-6).mean()
+
+        if not return_dict:
+            output = (code_logits,) + code_outputs[1:]
+            return ((loss,) + output) if loss is not None else output
+
+        return Seq2SeqSequenceClassifierOutput(
+            loss=loss,
+            logits=code_logits,
+            past_key_values=code_outputs.past_key_values,
+            decoder_hidden_states=code_outputs.decoder_hidden_states,
+            decoder_attentions=code_outputs.decoder_attentions,
+            cross_attentions=code_outputs.cross_attentions,
+            encoder_last_hidden_state=code_outputs.encoder_last_hidden_state,
+            encoder_hidden_states=code_outputs.encoder_hidden_states,
+            encoder_attentions=code_outputs.encoder_attentions,
+        )
+
+    def evaluate_search(self, dataloader):
+
+        self.set_model_mode(enums.BART_CLS)
+        self.eval()
+
+        with torch.no_grad():
+            for index_batch, batch in tqdm(dataloader, desc='Testing'):
+                logits, outputs = self.forward_logits(**batch)
+
+
 
 
