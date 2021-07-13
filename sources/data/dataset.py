@@ -8,6 +8,7 @@ import re
 import enums
 from .data_utils import load_dataset_from_dir, tokenize_source, align_source_code, \
     regular_tokenize, parse_for_summarization, parse_for_translation, parse_for_search
+from eval.bleu.google_bleu import avg_bleu
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class CodeDataset(Dataset):
                                                                                       code_path=self.code_path,
                                                                                       nl_path=self.nl_path,
                                                                                       lang=language)
-                assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
+                # assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
                 self.size = len(self.codes)
             # code translation
             elif task == enums.TASK_TRANSLATION:
@@ -136,13 +137,20 @@ class CodeDataset(Dataset):
             return self.codes_wo_name[index], self.asts[index], self.names_wo_name[index], self.names[index]
         # summarization
         elif self.task == enums.TASK_SUMMARIZATION:
-            return self.codes[index], self.asts[index], self.names[index], self.nls[index]
+            # return self.codes[index], self.asts[index], self.names[index], self.nls[index]
+            return self.codes[index], None, None, self.nls[index]
         # translation
         elif self.task == enums.TASK_TRANSLATION:
             return self.codes[index], self.asts[index], self.names[index], self.targets[index]
         # search
         elif self.task == enums.TASK_SEARCH:
-            return self.codes[index], self.asts[index], self.names[index], self.nls[index]
+            pos_nl = self.nls[index]
+            while True:
+                neg_index = random.randint(0, self.size - 1)
+                neg_nl = self.nls[neg_index]
+                if avg_bleu(references=[pos_nl.split()], candidates=[neg_nl.split()]) < 0.3:
+                    break
+            return self.codes[index], self.asts[index], self.names[index], pos_nl, neg_nl
 
     def __len__(self):
         return self.size
