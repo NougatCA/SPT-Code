@@ -15,7 +15,7 @@ class RuntimeArguments:
     )
 
     n_epoch: int = field(
-        default=200,
+        default=10,
         metadata={'help': 'Number of data iterations for training'}
     )
 
@@ -58,7 +58,8 @@ class RuntimeArguments:
 
     cuda_visible_devices: str = field(
         default=None,
-        metadata={'help': 'Visible cuda devices, string formatted, device number divided by \',\', e.g., \'0, 2\''}
+        metadata={'help': 'Visible cuda devices, string formatted, device number divided by \',\', e.g., \'0, 2\', '
+                          '\'None\' will use all'}
     )
 
 
@@ -157,12 +158,12 @@ class PreprocessingArguments:
     """Arguments for data preprocessing."""
 
     code_vocab_size: int = field(
-        default=30000,
+        default=20000,
         metadata={'help': 'Maximum size of code vocab'}
     )
 
     nl_vocab_size: int = field(
-        default=30000,
+        default=20000,
         metadata={'help': 'Maximum size of nl vocab'}
     )
 
@@ -208,13 +209,13 @@ class PreprocessingArguments:
     )
 
     code_tokenize_method: str = field(
-        default='bpe',
+        default='word',
         metadata={'help': 'Tokenize method of code',
                   'choices': ['word', 'bpe']}
     )
 
     nl_tokenize_method: str = field(
-        default='bpe',
+        default='word',
         metadata={'help': 'Tokenize method of nl',
                   'choices': ['word', 'bpe']}
     )
@@ -261,7 +262,7 @@ class OptimizerArguments:
     """Arguments for optimizer, early stopping, warmup, grad clipping, label smoothing."""
 
     learning_rate: float = field(
-        default=5e-5,
+        default=3e-4,
         metadata={'help': 'Learning rate'}
     )
 
