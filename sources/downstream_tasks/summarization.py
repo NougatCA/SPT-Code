@@ -68,13 +68,22 @@ def run_summarization(
             nl_vocab = load_vocab(vocab_root=trained_vocab, name=args.nl_vocab_name)
     else:
         logger.info('Building vocabularies')
-        code_vocab = Vocab(name=args.code_vocab_name, method=args.code_tokenize_method, vocab_size=args.code_vocab_size,
-                           datasets=[datasets['train'].codes], ignore_case=True, save_root=args.vocab_root)
-        ast_vocab = Vocab(name=args.ast_vocab_name, method='word', datasets=[datasets['train'].asts])
-        nl_vocab = Vocab(name=args.nl_vocab_name, method=args.nl_tokenize_method, vocab_size=args.nl_vocab_size,
-                         datasets=[datasets['train'].nls], ignore_case=True, save_root=args.vocab_root)
+        code_vocab = Vocab(name=args.code_vocab_name,
+                           method=args.code_tokenize_method,
+                           vocab_size=args.code_vocab_size,
+                           datasets=[datasets['train'].codes],
+                           ignore_case=True,
+                           save_root=args.vocab_root)
+        # ast_vocab = Vocab(name=args.ast_vocab_name, method='word', datasets=[datasets['train'].asts])
+        nl_vocab = Vocab(name=args.nl_vocab_name,
+                         method=args.nl_tokenize_method,
+                         vocab_size=args.nl_vocab_size,
+                         datasets=[datasets['train'].nls],
+                         ignore_case=True,
+                         save_root=args.vocab_root,
+                         index_offset=len(code_vocab))
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
-    logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
+    # logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
     logger.info(f'The size of nl vocabulary: {len(nl_vocab)}')
     logger.info('Vocabularies built successfully')
 
@@ -93,7 +102,7 @@ def run_summarization(
                                                                        config=config)
     else:
         logger.info('Building the model')
-        config = BartConfig(vocab_size=len(code_vocab) + len(ast_vocab) + len(nl_vocab),
+        config = BartConfig(vocab_size=len(code_vocab) + len(nl_vocab),
                             max_position_embeddings=1024,
                             encoder_layers=args.n_layer,
                             encoder_ffn_dim=args.d_ff,
@@ -111,10 +120,11 @@ def run_summarization(
                             is_encoder_decoder=True,
                             decoder_start_token_id=Vocab.START_VOCAB.index(Vocab.SOS_TOKEN),
                             forced_eos_token_id=Vocab.START_VOCAB.index(Vocab.EOS_TOKEN),
-                            max_length=100,
+                            max_length=args.max_nl_len,
                             min_length=1,
                             num_beams=args.beam_width,
                             num_labels=2)
+        # model = BartForConditionalGeneration(config)
         model = BartForClassificationAndGeneration(config, mode=enums.BART_GEN)
     # log model statistic
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
@@ -184,7 +194,7 @@ def run_summarization(
                                              predict_with_generate=True)
     trainer = CodeTrainer(main_args=args,
                           code_vocab=code_vocab,
-                          ast_vocab=ast_vocab,
+                          ast_vocab=None,
                           nl_vocab=nl_vocab,
                           task='summarization',
                           model=model,
