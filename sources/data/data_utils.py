@@ -487,8 +487,6 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
     # sources, codes, nls = sources[:1000], codes[:1000], nls[:1000]
     assert len(sources) == len(codes) == len(nls)
 
-    return codes, None, None, nls
-
     new_codes = []
     new_nls = []
     names = []
@@ -554,13 +552,14 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
     return new_sources, asts, names, new_targets
 
 
-def parse_for_search(dataset_dir, lang):
+def parse_for_search(dataset_dir, lang, split):
     """
     Load and parse for code search.
 
     Args:
         dataset_dir (str): Directory of the dataset
         lang (str): Source code language
+        split (str): Split set of the dataset, support `train`, `valid`, `test`, `codebase`
 
     Returns:
         (list[str], list[str], list[str], list[str])
@@ -570,20 +569,19 @@ def parse_for_search(dataset_dir, lang):
             - List of nl strings
 
     """
+    urls = []
     codes = []
     asts = []
     names = []
     nls = []
-    for file in iter_all_files(dataset_dir):
-        if not file.endswith('.jsonl'):
-            continue
-        with open(file, encoding='utf-8') as f:
-            logger.info(f'  File: {file}')
-            for line in tqdm(f.readlines()):
-                data = json.loads(line.strip())
-                if 'docstring_tokens' not in data:
-                    continue
-                try:
+
+    path = os.path.join(dataset_dir, f'{split}.jsonl')
+    with open(path, encoding='utf-8') as f:
+        logger.info(f'  File: {path}')
+        for line in tqdm(f.readlines()):
+            data = json.loads(line.strip())
+            try:
+                if split in ['codebase', 'train']:
                     code = replace_string_literal(' '.join(data['code_tokens']))
                     name = trim_method_name(data['func_name'])
 
@@ -592,14 +590,23 @@ def parse_for_search(dataset_dir, lang):
                     source = replace_string_literal(source)
                     ast, name = generate_single_ast_nl(source=source, lang=lang, name=name)
 
-                    nl = ' '.join(data['docstring_tokens'])
-
                     codes.append(code)
                     asts.append(ast)
-                    name = ' '.join(split_identifier(name))
                     names.append(name)
-                    nls.append(nl)
-                except Exception:
-                    continue
 
+                if split in ['train', 'valid', 'test']:
+                    nl = ' '.join(data['docstring_tokens'])
+                    nls.append(nl)
+
+                if split != 'train':
+                    url = data['url']
+                    urls.append(url)
+            except Exception:
+                continue
+
+    if split == 'codebase':
+        return urls, codes, asts, names
+    elif split == 'train':
         return codes, asts, names, nls
+    elif split in ['valid', 'test']:
+        return urls, nls
