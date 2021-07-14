@@ -19,6 +19,6 @@ LANG_RUBY = 'ruby'
 LANG_C_SHARP = 'c_sharp'
 
 # BART model mode
-BART_CLS = 'bart_cls'
-BART_GEN = 'bart_gen'
-BART_SEARCH = 'bart_search'
+MODE_CLS = 'bart_cls'
+MODE_GEN = 'bart_gen'
+MODE_SEARCH = 'bart_search'
