@@ -1,4 +1,3 @@
-import logging
 
 import torch
 from torch.nn import CrossEntropyLoss, MSELoss
@@ -9,6 +8,8 @@ from transformers.models.bart.modeling_bart import BartClassificationHead, shift
 from transformers.modeling_outputs import Seq2SeqLMOutput, Seq2SeqSequenceClassifierOutput
 
 from tqdm import tqdm
+import numpy as np
+import logging
 
 import enums
 
@@ -34,7 +35,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
         self.model._init_weights(self.classification_head.out_proj)
 
     def set_model_mode(self, mode):
-        assert mode in [enums.BART_GEN, enums.BART_CLS, enums.BART_SEARCH]
+        assert mode in [enums.MODE_GEN, enums.MODE_CLS, enums.MODE_SEARCH]
         self.mode = mode
         logging.info(f'BART mode switched to {mode}')
 
@@ -56,11 +57,12 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             output_attentions=None,
             output_hidden_states=None,
             return_dict=None,
-            **kwargs
+            neg_nl_input_ids=None,
+            neg_nl_attention_mask=None
     ):
         assert self.mode, 'It is required to specific a mode for BART before the model is passed through'
 
-        if self.mode == enums.BART_SEARCH:
+        if self.mode == enums.MODE_SEARCH:
             return self.forward_search(attention_mask=attention_mask,
                                        decoder_input_ids=decoder_input_ids,
                                        decoder_attention_mask=decoder_attention_mask,
@@ -76,9 +78,10 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                                        output_attentions=output_attentions,
                                        output_hidden_states=output_hidden_states,
                                        return_dict=return_dict,
-                                       **kwargs)
+                                       neg_nl_input_ids=neg_nl_input_ids,
+                                       neg_nl_attention_mask=neg_nl_attention_mask)
 
-        elif self.mode == enums.BART_GEN:
+        elif self.mode == enums.MODE_GEN:
             return self.forward_gen(input_ids=input_ids,
                                     attention_mask=attention_mask,
                                     decoder_input_ids=decoder_input_ids,
@@ -96,7 +99,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                                     output_hidden_states=output_hidden_states,
                                     return_dict=return_dict)
 
-        elif self.mode == enums.BART_CLS:
+        elif self.mode == enums.MODE_CLS:
             return self.forward_cls(input_ids=input_ids,
                                     attention_mask=attention_mask,
                                     decoder_input_ids=decoder_input_ids,
@@ -181,7 +184,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             encoder_attentions=outputs.encoder_attentions,
         )
 
-    def forward_logits(
+    def forward_representation(
             self,
             input_ids=None,
             attention_mask=None,
@@ -226,8 +229,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                                                                   hidden_states.size(-1))[
                                   :, -1, :
                                   ]
-        logits = self.classification_head(sentence_representation)
-        return logits, outputs
+        return sentence_representation, outputs
 
     def forward_cls(
             self,
@@ -284,23 +286,23 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
         #                           :, -1, :
         #                           ]
         # logits = self.classification_head(sentence_representation)
-        logits, outputs = self.forward_logits(input_ids=input_ids,
-                                              attention_mask=attention_mask,
-                                              decoder_input_ids=decoder_input_ids,
-                                              decoder_attention_mask=decoder_attention_mask,
-                                              head_mask=head_mask,
-                                              decoder_head_mask=decoder_head_mask,
-                                              cross_attn_head_mask=cross_attn_head_mask,
-                                              encoder_outputs=encoder_outputs,
-                                              past_key_values=past_key_values,
-                                              inputs_embeds=inputs_embeds,
-                                              decoder_inputs_embeds=decoder_inputs_embeds,
-                                              labels=labels,
-                                              use_cache=use_cache,
-                                              output_attentions=output_attentions,
-                                              output_hidden_states=output_hidden_states,
-                                              return_dict=return_dict)
-
+        representation, outputs = self.forward_representation(input_ids=input_ids,
+                                                              attention_mask=attention_mask,
+                                                              decoder_input_ids=decoder_input_ids,
+                                                              decoder_attention_mask=decoder_attention_mask,
+                                                              head_mask=head_mask,
+                                                              decoder_head_mask=decoder_head_mask,
+                                                              cross_attn_head_mask=cross_attn_head_mask,
+                                                              encoder_outputs=encoder_outputs,
+                                                              past_key_values=past_key_values,
+                                                              inputs_embeds=inputs_embeds,
+                                                              decoder_inputs_embeds=decoder_inputs_embeds,
+                                                              labels=labels,
+                                                              use_cache=use_cache,
+                                                              output_attentions=output_attentions,
+                                                              output_hidden_states=output_hidden_states,
+                                                              return_dict=return_dict)
+        logits = self.classification_head(representation)
         loss = None
         if labels is not None:
             if self.config.num_labels == 1:
@@ -350,56 +352,56 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
     ):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
-        code_logits, code_outputs = self.forward_logits(input_ids=input_ids,
-                                                        attention_mask=attention_mask,
-                                                        # decoder_input_ids=None,
-                                                        # decoder_attention_mask=decoder_attention_mask,
-                                                        # head_mask=head_mask,
-                                                        # decoder_head_mask=decoder_head_mask,
-                                                        # cross_attn_head_mask=cross_attn_head_mask,
-                                                        # encoder_outputs=encoder_outputs,
-                                                        # past_key_values=past_key_values,
-                                                        # inputs_embeds=inputs_embeds,
-                                                        # decoder_inputs_embeds=None,
-                                                        # labels=None,
-                                                        use_cache=use_cache,
-                                                        # output_attentions=output_attentions,
-                                                        # output_hidden_states=output_hidden_states,
-                                                        return_dict=return_dict)
-        nl_logits, nl_outputs = self.forward_logits(input_ids=decoder_input_ids,
-                                                    attention_mask=decoder_attention_mask,
-                                                    # decoder_input_ids=None,
-                                                    # decoder_attention_mask=None,
-                                                    # head_mask=head_mask,
-                                                    # decoder_head_mask=decoder_head_mask,
-                                                    # cross_attn_head_mask=cross_attn_head_mask,
-                                                    # encoder_outputs=encoder_outputs,
-                                                    # past_key_values=past_key_values,
-                                                    # inputs_embeds=inputs_embeds,
-                                                    # decoder_inputs_embeds=None,
-                                                    # labels=None,
-                                                    use_cache=use_cache,
-                                                    # output_attentions=output_attentions,
-                                                    # output_hidden_states=output_hidden_states,
-                                                    return_dict=return_dict)
+        code_representation, code_outputs = self.forward_representation(input_ids=input_ids,
+                                                                        attention_mask=attention_mask,
+                                                                        # decoder_input_ids=None,
+                                                                        # decoder_attention_mask=decoder_attention_mask,
+                                                                        # head_mask=head_mask,
+                                                                        # decoder_head_mask=decoder_head_mask,
+                                                                        # cross_attn_head_mask=cross_attn_head_mask,
+                                                                        # encoder_outputs=encoder_outputs,
+                                                                        # past_key_values=past_key_values,
+                                                                        # inputs_embeds=inputs_embeds,
+                                                                        # decoder_inputs_embeds=None,
+                                                                        # labels=None,
+                                                                        use_cache=use_cache,
+                                                                        # output_attentions=output_attentions,
+                                                                        # output_hidden_states=output_hidden_states,
+                                                                        return_dict=return_dict)
+        nl_representation, nl_outputs = self.forward_representation(input_ids=decoder_input_ids,
+                                                                    attention_mask=decoder_attention_mask,
+                                                                    # decoder_input_ids=None,
+                                                                    # decoder_attention_mask=None,
+                                                                    # head_mask=head_mask,
+                                                                    # decoder_head_mask=decoder_head_mask,
+                                                                    # cross_attn_head_mask=cross_attn_head_mask,
+                                                                    # encoder_outputs=encoder_outputs,
+                                                                    # past_key_values=past_key_values,
+                                                                    # inputs_embeds=inputs_embeds,
+                                                                    # decoder_inputs_embeds=None,
+                                                                    # labels=None,
+                                                                    use_cache=use_cache,
+                                                                    # output_attentions=output_attentions,
+                                                                    # output_hidden_states=output_hidden_states,
+                                                                    return_dict=return_dict)
 
-        neg_nl_logits, neg_nl_outputs = self.forward_logits(input_ids=neg_nl_input_ids,
-                                                            attention_mask=neg_nl_attention_mask,
-                                                            use_cache=use_cache,
-                                                            return_dict=return_dict)
+        neg_nl_representation, neg_nl_outputs = self.forward_representation(input_ids=neg_nl_input_ids,
+                                                                            attention_mask=neg_nl_attention_mask,
+                                                                            use_cache=use_cache,
+                                                                            return_dict=return_dict)
 
-        pos_sim = f.cosine_similarity(code_logits, nl_logits)
-        neg_sim = f.cosine_similarity(code_logits, neg_nl_logits)
+        pos_sim = f.cosine_similarity(code_representation, nl_representation)
+        neg_sim = f.cosine_similarity(code_representation, neg_nl_representation)
 
         loss = (0.413 - pos_sim + neg_sim).clamp(min=1e-6).mean()
 
         if not return_dict:
-            output = (code_logits,) + code_outputs[1:]
+            output = (code_representation,) + code_outputs[1:]
             return ((loss,) + output) if loss is not None else output
 
         return Seq2SeqSequenceClassifierOutput(
             loss=loss,
-            logits=code_logits,
+            logits=code_representation,
             past_key_values=code_outputs.past_key_values,
             decoder_hidden_states=code_outputs.decoder_hidden_states,
             decoder_attentions=code_outputs.decoder_attentions,
@@ -409,15 +411,28 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             encoder_attentions=code_outputs.encoder_attentions,
         )
 
-    def evaluate_search(self, dataloader):
+    def evaluate_search(self,
+                        query_dataloader: torch.utils.data.dataloader.DataLoader,
+                        codebase_dataloader: torch.utils.data.dataloader.DataLoader):
 
-        self.set_model_mode(enums.BART_CLS)
+        self.set_model_mode(enums.MODE_CLS)
         self.eval()
 
         with torch.no_grad():
-            for index_batch, batch in tqdm(dataloader, desc='Testing'):
-                logits, outputs = self.forward_logits(**batch)
+            logger.info('(1/2) Embedding search queries')
+            query_vectors = []
+            for _, batch in enumerate(tqdm(query_dataloader)):
+                representation, outputs = self.forward_representation(**batch)  # representation: [B, H]
+                representation = representation.cpu().numpy()   # [B, H]
+                query_vectors.append(representation)
+            query_vectors = np.vstack(query_vectors)    # [len_query, H]
 
-
+            logger.info('(2/2) Embedding candidate codes')
+            code_vectors = []
+            for _, batch in enumerate(tqdm(codebase_dataloader)):
+                representation, outputs = self.forward_representation(**batch)
+                representation = representation.cpu().numpy()
+                code_vectors.append(representation)
+            code_vectors = np.vstack(code_vectors)  # [len_code, H]
 
 
