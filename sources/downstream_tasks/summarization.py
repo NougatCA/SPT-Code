@@ -1,4 +1,4 @@
-from transformers import BartForConditionalGeneration, BartConfig, Seq2SeqTrainingArguments, EarlyStoppingCallback, \
+from transformers import BartConfig, Seq2SeqTrainingArguments, EarlyStoppingCallback, \
     IntervalStrategy, SchedulerType
 
 import logging
@@ -74,7 +74,6 @@ def run_summarization(
                            datasets=[datasets['train'].codes],
                            ignore_case=True,
                            save_root=args.vocab_root)
-        # ast_vocab = Vocab(name=args.ast_vocab_name, method='word', datasets=[datasets['train'].asts])
         nl_vocab = Vocab(name=args.nl_vocab_name,
                          method=args.nl_tokenize_method,
                          vocab_size=args.nl_vocab_size,
@@ -82,9 +81,14 @@ def run_summarization(
                          ignore_case=True,
                          save_root=args.vocab_root,
                          index_offset=len(code_vocab))
+        ast_vocab = Vocab(name=args.ast_vocab_name,
+                          method='word',
+                          datasets=[datasets['train'].asts],
+                          save_root=args.vocab_root,
+                          index_offset=len(code_vocab) + len(nl_vocab))
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
-    # logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
     logger.info(f'The size of nl vocabulary: {len(nl_vocab)}')
+    logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
     logger.info('Vocabularies built successfully')
 
     # --------------------------------------------------
@@ -102,7 +106,7 @@ def run_summarization(
                                                                        config=config)
     else:
         logger.info('Building the model')
-        config = BartConfig(vocab_size=len(code_vocab) + len(nl_vocab),
+        config = BartConfig(vocab_size=len(code_vocab) + len(nl_vocab) + len(ast_vocab),
                             max_position_embeddings=1024,
                             encoder_layers=args.n_layer,
                             encoder_ffn_dim=args.d_ff,
@@ -124,9 +128,9 @@ def run_summarization(
                             min_length=1,
                             num_beams=args.beam_width,
                             num_labels=2)
-        # model = BartForConditionalGeneration(config)
-        model = BartForClassificationAndGeneration(config, mode=enums.BART_GEN)
-    # log model statistic
+        model = BartForClassificationAndGeneration(config)
+    model.set_model_mode(enums.MODE_GEN)
+    # log model statistics
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
     table = layer_wise_parameters(model)
     logger.debug('Layer-wised trainable parameters:\n{}'.format(table))
@@ -162,7 +166,7 @@ def run_summarization(
         result.update(avg_ir_metrics(references=refs, candidates=cans))
         return result
 
-    training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, 'summarization'),
+    training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_SUMMARIZATION),
                                              overwrite_output_dir=True,
                                              do_train=True,
                                              do_eval=True,
@@ -178,7 +182,7 @@ def run_summarization(
                                              num_train_epochs=args.n_epoch,
                                              lr_scheduler_type=SchedulerType.LINEAR,
                                              warmup_steps=args.warmup_steps,
-                                             logging_dir=os.path.join(args.tensor_board_root, 'summarization'),
+                                             logging_dir=os.path.join(args.tensor_board_root, enums.TASK_SUMMARIZATION),
                                              logging_strategy=IntervalStrategy.STEPS,
                                              logging_steps=args.tensor_board_logging_steps,
                                              save_strategy=IntervalStrategy.EPOCH,
@@ -194,9 +198,9 @@ def run_summarization(
                                              predict_with_generate=True)
     trainer = CodeTrainer(main_args=args,
                           code_vocab=code_vocab,
-                          ast_vocab=None,
+                          ast_vocab=ast_vocab,
                           nl_vocab=nl_vocab,
-                          task='summarization',
+                          task=enums.TASK_SUMMARIZATION,
                           model=model,
                           args=training_args,
                           data_collator=None,
@@ -251,9 +255,12 @@ def run_summarization(
     trainer.log_metrics(split='test', metrics=predict_metrics)
     trainer.save_metrics(split='test', metrics=predict_metrics)
     # save testing results
-    with open(os.path.join(args.output_root, 'test_results.txt'), mode='w', encoding='utf-8') as result_f, \
-            open(os.path.join(args.output_root, 'test_refs.txt'), mode='w', encoding='utf-8') as refs_f, \
-            open(os.path.join(args.output_root, 'test_cans.txt'), mode='w', encoding='utf-8') as cans_f:
+    with open(os.path.join(args.output_root, f'{enums.TASK_SUMMARIZATION}_test_results.txt'),
+              mode='w', encoding='utf-8') as result_f, \
+            open(os.path.join(args.output_root, f'{enums.TASK_SUMMARIZATION}_test_refs.txt'),
+                 mode='w', encoding='utf-8') as refs_f, \
+            open(os.path.join(args.output_root, f'{enums.TASK_SUMMARIZATION}_test_cans.txt'),
+                 mode='w', encoding='utf-8') as cans_f:
         sample_id = 0
         for reference, candidate in zip(references, candidates):
             result_f.write(f'sample {sample_id}:\n')
