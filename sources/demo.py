@@ -207,26 +207,40 @@ def lang_sample(lang):
 
 # import tokenize
 # from io import StringIO
-from data.data_utils import remove_comments_and_docstrings, replace_string_literal, trim_spaces
-import nltk
+# from data.data_utils import remove_comments_and_docstrings, replace_string_literal, trim_spaces
+# import nltk
+# #
+# #
+# lang = 'php'
+# source, _, _ = lang_sample(lang)
+# source = remove_comments_and_docstrings(source, lang)
+# source = replace_string_literal(source)
 #
 #
-lang = 'php'
-source, _, _ = lang_sample(lang)
-source = remove_comments_and_docstrings(source, lang)
-source = replace_string_literal(source)
-
-
-def regular_tokenize(source: str):
-    source = re.sub(r'(\S)[.=](\S)', r'\1 . \2', source)
-    return nltk.word_tokenize(source)
-
-
-# def tokenize_python(source):
-#     tokens = tokenize.generate_tokens(StringIO(source).readline)
-#     return ' '.join([token.string for token in tokens])
+# def regular_tokenize(source: str):
+#     source = re.sub(r'(\S)[.=](\S)', r'\1 . \2', source)
+#     return nltk.word_tokenize(source)
 #
-print(source)
-print('-' * 100)
-print('\n'.join(regular_tokenize(source)))
+#
+# # def tokenize_python(source):
+# #     tokens = tokenize.generate_tokens(StringIO(source).readline)
+# #     return ' '.join([token.string for token in tokens])
+# #
+# print(source)
+# print('-' * 100)
+# print('\n'.join(regular_tokenize(source)))
+
+
+import numpy as np
+
+
+vectors = []
+for i in range(10):
+    rep = np.random.rand(16, 256)
+    vectors.append(rep)
+vectors.append(np.random.rand(10, 256))
+
+vectors = np.concatenate(vectors, 0)
+print(vectors.shape)
+
 

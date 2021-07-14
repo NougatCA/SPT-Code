@@ -15,7 +15,7 @@ class RuntimeArguments:
     )
 
     n_epoch: int = field(
-        default=10,
+        default=200,
         metadata={'help': 'Number of data iterations for training'}
     )
 
@@ -52,7 +52,7 @@ class RuntimeArguments:
     )
 
     log_state_every: int = field(
-        default=1000,
+        default=100,
         metadata={'help': 'Log training state to log file every n files'}
     )
 
@@ -70,21 +70,6 @@ class DatasetArguments:
     dataset_root: str = field(
         default='../../dataset/',
         metadata={'help': 'Root of the dataset'}
-    )
-
-    source_filename: str = field(
-        default='source.code',
-        metadata={'help': 'File name of the source code dataset, which can be parsed to AST directly'}
-    )
-
-    code_filename: str = field(
-        default='token.code',
-        metadata={'help': 'File name of the code dataset, identifiers are split into subtokens'}
-    )
-
-    nl_filename: str = field(
-        default='token.nl',
-        metadata={'help': 'File name of the comment or the method name dataset'}
     )
 
     train_set_dir: str = field(
@@ -158,7 +143,7 @@ class PreprocessingArguments:
     """Arguments for data preprocessing."""
 
     code_vocab_size: int = field(
-        default=20000,
+        default=30000,
         metadata={'help': 'Maximum size of code vocab'}
     )
 

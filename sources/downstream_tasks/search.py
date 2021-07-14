@@ -11,7 +11,7 @@ from data.vocab import Vocab, load_vocab
 from data.dataset import CodeDataset
 from utils.general import count_params, human_format, layer_wise_parameters
 from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics
-from utils.callbacks import LogStateCallBack
+from utils.callbacks import LogStateCallBack, SearchValidCallBack
 from utils.trainer import CodeTrainer
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ def run_search(
     logger.info('-' * 100)
     logger.info('Loading datasets')
     datasets = dict()
-    splits = ['test'] if only_test else ['train', 'valid', 'test']
+    splits = ['codebase', 'test'] if only_test else ['codebase', 'train', 'valid', 'test']
     for split in splits:
         datasets[split] = CodeDataset(args=args,
                                       mode='fine_tune',
@@ -68,14 +68,27 @@ def run_search(
             nl_vocab = load_vocab(vocab_root=trained_vocab, name=args.nl_vocab_name)
     else:
         logger.info('Building vocabularies')
-        code_vocab = Vocab(name=args.code_vocab_name, method=args.code_tokenize_method, vocab_size=args.code_vocab_size,
-                           datasets=[datasets['train'].codes], ignore_case=True, save_root=args.vocab_root)
-        ast_vocab = Vocab(name=args.ast_vocab_name, method='word', datasets=[datasets['train'].asts])
-        nl_vocab = Vocab(name=args.nl_vocab_name, method=args.nl_tokenize_method, vocab_size=args.nl_vocab_size,
-                         datasets=[datasets['train'].nls], ignore_case=True, save_root=args.vocab_root)
+        code_vocab = Vocab(name=args.code_vocab_name,
+                           method=args.code_tokenize_method,
+                           vocab_size=args.code_vocab_size,
+                           datasets=[datasets['train'].codes],
+                           ignore_case=True,
+                           save_root=args.vocab_root)
+        nl_vocab = Vocab(name=args.nl_vocab_name,
+                         method=args.nl_tokenize_method,
+                         vocab_size=args.nl_vocab_size,
+                         datasets=[datasets['train'].nls],
+                         ignore_case=True,
+                         save_root=args.vocab_root,
+                         index_offset=len(code_vocab))
+        ast_vocab = Vocab(name=args.ast_vocab_name,
+                          method='word',
+                          datasets=[datasets['train'].asts],
+                          save_root=args.vocab_root,
+                          index_offset=len(code_vocab) + len(nl_vocab))
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
-    logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
     logger.info(f'The size of nl vocabulary: {len(nl_vocab)}')
+    logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
     logger.info('Vocabularies built successfully')
 
     # --------------------------------------------------
@@ -111,11 +124,12 @@ def run_search(
                             is_encoder_decoder=True,
                             decoder_start_token_id=Vocab.START_VOCAB.index(Vocab.SOS_TOKEN),
                             forced_eos_token_id=Vocab.START_VOCAB.index(Vocab.EOS_TOKEN),
-                            max_length=100,
+                            max_length=args.max_code_len,
                             min_length=1,
                             num_beams=args.beam_width,
                             num_labels=2)
-        model = BartForClassificationAndGeneration(config, mode=enums.BART_SEARCH)
+        model = BartForClassificationAndGeneration(config, mode=enums.MODE_SEARCH)
+    model.set_model_mode(enums.MODE_SEARCH)
     # log model statistic
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
     table = layer_wise_parameters(model)
@@ -127,30 +141,6 @@ def run_search(
     # --------------------------------------------------
     logger.info('-' * 100)
     logger.info('Initializing the running configurations')
-
-    def decode_preds(preds):
-        preds, labels = preds
-        decoded_preds = nl_vocab.decode_batch(preds)
-        decoded_labels = nl_vocab.decode_batch(labels)
-        return decoded_labels, decoded_preds
-
-    # compute metrics
-    def compute_valid_metrics(eval_preds):
-        decoded_labels, decoded_preds = decode_preds(eval_preds)
-        result = {}
-        result.update(bleu(references=decoded_labels, candidates=decoded_preds))
-        return result
-
-    def compute_test_metrics(eval_preds):
-        decoded_labels, decoded_preds = decode_preds(eval_preds)
-        result = {'references': decoded_labels, 'candidates': decoded_preds}
-        refs = [ref.strip().split() for ref in decoded_labels]
-        cans = [can.strip().split() for can in decoded_preds]
-        result.update(bleu(references=refs, candidates=cans))
-        result.update(meteor(references=refs, candidates=cans))
-        result.update(rouge_l(references=refs, candidates=cans))
-        result.update(avg_ir_metrics(references=refs, candidates=cans))
-        return result
 
     training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_SEARCH),
                                              overwrite_output_dir=True,
@@ -176,8 +166,8 @@ def run_search(
                                              dataloader_drop_last=False,
                                              run_name=args.model_name,
                                              load_best_model_at_end=True,
-                                             metric_for_best_model=args.valid_metric,
-                                             greater_is_better=not args.valid_metric.endswith('loss'),
+                                             metric_for_best_model=None,
+                                             greater_is_better=None,
                                              ignore_data_skip=False,
                                              label_smoothing_factor=args.label_smoothing,
                                              dataloader_pin_memory=True,
@@ -194,10 +184,11 @@ def run_search(
                           eval_dataset=datasets['valid'] if 'valid' in datasets else None,
                           tokenizer=nl_vocab,
                           model_init=None,
-                          compute_metrics=compute_valid_metrics,
+                          compute_metrics=None,
                           callbacks=[
                               EarlyStoppingCallback(early_stopping_patience=args.early_stop_patience),
-                              LogStateCallBack()])
+                              LogStateCallBack(),
+                              SearchValidCallBack()])
     logger.info('Running configurations initialized successfully')
 
     # --------------------------------------------------
@@ -214,24 +205,11 @@ def run_search(
         trainer.log_metrics(split='train', metrics=metrics)
         trainer.save_metrics(split='train', metrics=metrics)
 
-        # # --------------------------------------------------
-        # # eval
-        # # --------------------------------------------------
-        # logger.info('-' * 100)
-        # logger.info('Start evaluating')
-        # eval_metrics = trainer.evaluate(metric_key_prefix='valid',
-        #                                 max_length=args.max_decode_step,
-        #                                 num_beams=args.beam_width)
-        # trainer.log_metrics(split='valid', metrics=eval_metrics)
-        # trainer.save_metrics(split='valid', metrics=eval_metrics)
-
     # --------------------------------------------------
     # predict
     # --------------------------------------------------
     logger.info('-' * 100)
     logger.info('Start testing')
-    trainer.compute_metrics = compute_test_metrics
-    model.set_model_mode(enums.BART_CLS)
     predict_results = trainer.predict(test_dataset=datasets['test'],
                                       metric_key_prefix='test',
                                       max_length=args.max_decode_step,
@@ -259,3 +237,8 @@ def run_search(
     logger.info('Testing finished')
     for name, score in predict_metrics.items():
         logger.info(f'{name}: {score}')
+
+
+def eval_search():
+
+
