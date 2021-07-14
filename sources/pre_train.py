@@ -100,7 +100,7 @@ def pre_train(args, tasks=None):
         if task == enums.TASK_CODE_AST_PREDICTION:
             # set model mode
             logger.info('-' * 100)
-            model.set_model_mode(enums.BART_CLS)
+            model.set_model_mode(enums.MODE_CLS)
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -155,7 +155,7 @@ def pre_train(args, tasks=None):
         elif task == enums.TASK_NEXT_CODE_PREDICTION:
             # set model mode
             logger.info('-' * 100)
-            model.set_model_mode(enums.BART_GEN)
+            model.set_model_mode(enums.MODE_GEN)
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -212,7 +212,7 @@ def pre_train(args, tasks=None):
         elif task == enums.TASK_METHOD_NAME_PREDICTION:
             # set model mode
             logger.info('-' * 100)
-            model.set_model_mode(enums.BART_GEN)
+            model.set_model_mode(enums.MODE_GEN)
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
