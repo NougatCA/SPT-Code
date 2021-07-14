@@ -33,6 +33,7 @@ class CodeDataset(Dataset):
         self.args = args
         self.task = task
         self.mode = mode
+        self.split = split
 
         # dataset dir for files, all files in this dir meeting the filename will be used as dataset files
         self.dataset_dir = os.path.join(args.dataset_root, self.mode)
@@ -40,7 +41,7 @@ class CodeDataset(Dataset):
         # load pre-training dataset
         if self.mode == 'pre_train':
             self.languages, self.sources, self.codes, self.asts, self.names, self.codes_wo_name, \
-                self.names_wo_name, self.only_names = load_dataset_from_dir(dataset_dir=self.dataset_dir)
+            self.names_wo_name, self.only_names = load_dataset_from_dir(dataset_dir=self.dataset_dir)
             self.size = len(self.codes)
         # load fine-tuning dataset
         else:
@@ -50,6 +51,7 @@ class CodeDataset(Dataset):
             # code summarization
             if task == enums.TASK_SUMMARIZATION:
                 assert language, '\'Language\' must be specific if downstream task is code summarization'
+                assert split in ['train', 'valid', 'test']
                 self.dataset_dir = os.path.join(self.dataset_dir, language, split)
 
                 self.source_path = os.path.join(self.dataset_dir, 'flat.code')
@@ -60,10 +62,11 @@ class CodeDataset(Dataset):
                                                                                       code_path=self.code_path,
                                                                                       nl_path=self.nl_path,
                                                                                       lang=language)
-                # assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
+                assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
                 self.size = len(self.codes)
             # code translation
             elif task == enums.TASK_TRANSLATION:
+                assert split in ['train', 'valid', 'test']
                 java_path = f'{split}.java-cs.txt.java'
                 c_sharp_path = f'{split}.java-cs.txt.cs'
                 if args.translation_source_language == args.translation_target_language:
@@ -84,11 +87,24 @@ class CodeDataset(Dataset):
             # code search
             elif task == enums.TASK_SEARCH:
                 assert language, '``Language`` must be specific if downstream task is code search'
-                self.dataset_dir = os.path.join(self.dataset_dir, language, split)
+                assert split in ['codebase', 'train', 'valid', 'test']
+                self.dataset_dir = os.path.join(self.dataset_dir, language)
 
-                self.codes, self.asts, self.names, self.nls = parse_for_search(self.dataset_dir, lang=language)
-                assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
-                self.size = len(self.codes)
+                if split == 'codebase':
+                    self.urls, self.codes, self.asts, self.names = parse_for_search(dataset_dir=self.dataset_dir,
+                                                                                    lang=language,
+                                                                                    split=split)
+                    assert len(self.urls), len(self.codes) == len(self.asts) == len(self.names)
+                    self.size = len(self.urls)
+                elif split == 'train':
+                    self.codes, self.asts, self.names, self.nls = parse_for_search(dataset_dir=self.dataset_dir,
+                                                                                   lang=language,
+                                                                                   split=split)
+                    assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
+                    self.size = len(self.codes)
+                else:
+                    self.urls, self.nls = parse_for_search(dataset_dir=self.dataset_dir, lang=language, split=split)
+                    self.size = len(self.urls)
 
     def __getitem__(self, index):
         # cap
@@ -137,20 +153,25 @@ class CodeDataset(Dataset):
             return self.codes_wo_name[index], self.asts[index], self.names_wo_name[index], self.names[index]
         # summarization
         elif self.task == enums.TASK_SUMMARIZATION:
-            # return self.codes[index], self.asts[index], self.names[index], self.nls[index]
-            return self.codes[index], None, None, self.nls[index]
+            return self.codes[index], self.asts[index], self.names[index], self.nls[index]
+            # return self.codes[index], None, None, self.nls[index]
         # translation
         elif self.task == enums.TASK_TRANSLATION:
             return self.codes[index], self.asts[index], self.names[index], self.targets[index]
         # search
         elif self.task == enums.TASK_SEARCH:
-            pos_nl = self.nls[index]
-            while True:
-                neg_index = random.randint(0, self.size - 1)
-                neg_nl = self.nls[neg_index]
-                if avg_bleu(references=[pos_nl.split()], candidates=[neg_nl.split()]) < 0.3:
-                    break
-            return self.codes[index], self.asts[index], self.names[index], pos_nl, neg_nl
+            if self.split == 'codebase':
+                return self.split, self.urls[index], self.codes[index], self.asts[index], self.names[index]
+            elif self.split == 'train':
+                pos_nl = self.nls[index]
+                while True:
+                    neg_index = random.randint(0, self.size - 1)
+                    neg_nl = self.nls[neg_index]
+                    if avg_bleu(references=[pos_nl.split()], candidates=[neg_nl.split()]) < 0.3:
+                        break
+                return self.split, self.codes[index], self.asts[index], self.names[index], pos_nl, neg_nl
+            else:
+                return self.split, self.urls[index], self.nls[index]
 
     def __len__(self):
         return self.size
