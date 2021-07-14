@@ -68,15 +68,28 @@ def run_translation(
             nl_vocab = load_vocab(vocab_root=trained_vocab, name=args.nl_vocab_name)
     else:
         logger.info('Building vocabularies')
-        code_vocab = Vocab(name=args.code_vocab_name, method=args.code_tokenize_method, vocab_size=args.code_vocab_size,
-                           datasets=[datasets['train'].codes, datasets['train'].targets], ignore_case=True,
+        code_vocab = Vocab(name=args.code_vocab_name,
+                           method=args.code_tokenize_method,
+                           vocab_size=args.code_vocab_size,
+                           datasets=[datasets['train'].codes, datasets['train'].targets],
+                           ignore_case=True,
                            save_root=args.vocab_root)
-        ast_vocab = Vocab(name=args.ast_vocab_name, method='word', datasets=[datasets['train'].asts])
-        nl_vocab = Vocab(name=args.nl_vocab_name, method=args.nl_tokenize_method, vocab_size=args.nl_vocab_size,
-                         datasets=[datasets['train'].names], ignore_case=True, save_root=args.vocab_root)
+        nl_vocab = Vocab(name=args.nl_vocab_name,
+                         method=args.nl_tokenize_method,
+                         vocab_size=args.nl_vocab_size,
+                         datasets=[datasets['train'].names],
+                         ignore_case=True,
+                         save_root=args.vocab_root,
+                         index_offset=len(code_vocab))
+        ast_vocab = Vocab(name=args.ast_vocab_name,
+                          method='word',
+                          datasets=[datasets['train'].asts],
+                          save_root=args.vocab_root,
+                          index_offset=len(code_vocab) + len(nl_vocab))
+
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
-    logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
     logger.info(f'The size of nl vocabulary: {len(nl_vocab)}')
+    logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
     logger.info('Vocabularies built successfully')
 
     # --------------------------------------------------
@@ -112,11 +125,12 @@ def run_translation(
                             is_encoder_decoder=True,
                             decoder_start_token_id=Vocab.START_VOCAB.index(Vocab.SOS_TOKEN),
                             forced_eos_token_id=Vocab.START_VOCAB.index(Vocab.EOS_TOKEN),
-                            max_length=100,
+                            max_length=args.max_code_len,
                             min_length=1,
                             num_beams=args.beam_width,
                             num_labels=2)
-        model = BartForClassificationAndGeneration(config, mode=enums.BART_GEN)
+        model = BartForClassificationAndGeneration(config)
+    model.set_model_mode(enums.MODE_GEN)
     # log model statistic
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
     table = layer_wise_parameters(model)
@@ -153,7 +167,7 @@ def run_translation(
         result.update(avg_ir_metrics(references=refs, candidates=cans))
         return result
 
-    training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, 'translation'),
+    training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_TRANSLATION),
                                              overwrite_output_dir=True,
                                              do_train=True,
                                              do_eval=True,
@@ -169,7 +183,7 @@ def run_translation(
                                              num_train_epochs=args.n_epoch,
                                              lr_scheduler_type=SchedulerType.LINEAR,
                                              warmup_steps=args.warmup_steps,
-                                             logging_dir=os.path.join(args.tensor_board_root, 'translation'),
+                                             logging_dir=os.path.join(args.tensor_board_root, enums.TASK_TRANSLATION),
                                              logging_strategy=IntervalStrategy.STEPS,
                                              logging_steps=args.tensor_board_logging_steps,
                                              save_strategy=IntervalStrategy.EPOCH,
@@ -187,7 +201,7 @@ def run_translation(
                           code_vocab=code_vocab,
                           ast_vocab=ast_vocab,
                           nl_vocab=nl_vocab,
-                          task='translation',
+                          task=enums.TASK_TRANSLATION,
                           model=model,
                           args=training_args,
                           data_collator=None,
@@ -242,9 +256,12 @@ def run_translation(
     trainer.log_metrics(split='test', metrics=predict_metrics)
     trainer.save_metrics(split='test', metrics=predict_metrics)
     # save testing results
-    with open(os.path.join(args.output_root, 'test_results.txt'), mode='w', encoding='utf-8') as result_f, \
-            open(os.path.join(args.output_root, 'test_refs.txt'), mode='w', encoding='utf-8') as refs_f, \
-            open(os.path.join(args.output_root, 'test_cans.txt'), mode='w', encoding='utf-8') as cans_f:
+    with open(os.path.join(args.output_root, f'{enums.TASK_TRANSLATION}_test_results.txt'),
+              mode='w', encoding='utf-8') as result_f, \
+            open(os.path.join(args.output_root, f'{enums.TASK_TRANSLATION}_test_refs.txt'),
+                 mode='w', encoding='utf-8') as refs_f, \
+            open(os.path.join(args.output_root, f'{enums.TASK_TRANSLATION}_test_cans.txt'),
+                 mode='w', encoding='utf-8') as cans_f:
         sample_id = 0
         for reference, candidate in zip(references, candidates):
             result_f.write(f'sample {sample_id}:\n')
