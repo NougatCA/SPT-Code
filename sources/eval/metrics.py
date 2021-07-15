@@ -1,5 +1,6 @@
 
 from collections import Counter
+import re
 
 from .bleu.google_bleu import avg_bleu
 from .meteor.meteor import Meteor
@@ -11,8 +12,8 @@ def ir_metrics(references, candidates):
     An ir metrics for a list of references and candidates, each of both is a single token so that need exact match.
 
     Args:
-        references: A list of references, each reference should be one token
-        candidates: A list of candidates, each candidate should be one token
+        references (list[str]): A list of references, each reference should be one token
+        candidates (list[str]): A list of candidates, each candidate should be one token
 
     Returns:
         (float, float, float):
@@ -40,8 +41,8 @@ def avg_ir_metrics(references, candidates):
     this version of ir metrics calculate the avg scores of each candidate in candidates.
 
     Args:
-        references (list): A list of references, each reference should be tokenized into a list of tokens
-        candidates (list): A list of candidates, each candidate should be tokenized into a list of tokens
+        references (list[list[str]]): A list of references, each reference should be tokenized into a list of tokens
+        candidates (list[list[str]]): A list of candidates, each candidate should be tokenized into a list of tokens
 
     Returns:
         dict: Dict of mapping ir metric names to scores
@@ -55,7 +56,41 @@ def avg_ir_metrics(references, candidates):
         total_f1 += f1
 
     size = len(references)
-    return {'precision': total_p / size, 'recall': total_r / size, 'f1': total_f1 / size}
+    return {'avg_precision': total_p / size, 'avg_recall': total_r / size, 'avg_f1': total_f1 / size}
+
+
+def remove_white_characters(tokens):
+    """
+    Join the list of tokens and remove all white characters.
+
+    Args:
+        tokens (list[str]): List of tokens
+
+    Returns:
+        str: String after removing white characters
+
+    """
+    s = ''.join(tokens).lower()
+    return re.sub(r'\s', '', s)
+
+
+def exact_ir_metrics(references, candidates):
+    """
+    Calculate precision, recall and f1 score,
+        this version of ir metrics calculate scores of each candidate in candidates
+        which match the corresponding reference exactly (except white characters).
+
+    Args:
+        references (list[list[str]]): A list of references, each reference should be tokenized into a list of tokens
+        candidates (list[list[str]]): A list of candidates, each candidate should be tokenized into a list of tokens
+
+    Returns:
+        dict: Dict of mapping ir metric names to scores
+    """
+    text_references = [remove_white_characters(ref) for ref in references]
+    text_candidates = [remove_white_characters(can) for can in candidates]
+    p, r, f1 = ir_metrics(references=text_references, candidates=text_candidates)
+    return {'exact_precision': p, 'exact_recall': r, 'exact_f1': f1}
 
 
 def bleu(references, candidates):
