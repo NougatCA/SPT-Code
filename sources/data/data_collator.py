@@ -158,10 +158,10 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
     elif task == enums.TASK_SEARCH:
 
         batch_raw = map(list, zip(*batch))
-        split = batch_raw[0][0]
+        split = next(batch_raw)[0]
 
         if split == 'codebase':
-            _, url_raw, code_raw, ast_raw, name_raw = batch_raw
+            url_raw, code_raw, ast_raw, name_raw = batch_raw
 
             model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(
                 code_raw=code_raw,
@@ -178,7 +178,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             model_inputs['urls'] = url_raw
 
         elif split == 'train':
-            _, code_raw, ast_raw, name_raw, nl_raw, neg_nl_raw = batch_raw
+            code_raw, ast_raw, name_raw, nl_raw, neg_nl_raw = batch_raw
 
             model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(
                 code_raw=code_raw,
@@ -195,24 +195,24 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
                 batch=nl_raw,
                 vocab=nl_vocab,
-                processor=Vocab.sos_processor,
+                processor=Vocab.eos_processor,
                 max_len=args.max_nl_len
             )
             # neg_nl_input_ids, neg_nl_attention_mask
             model_inputs['neg_nl_input_ids'], model_inputs['neg_nl_attention_mask'] = get_batch_inputs(
                 batch=neg_nl_raw,
                 vocab=nl_vocab,
-                processor=Vocab.sos_processor,
+                processor=Vocab.eos_processor,
                 max_len=args.max_nl_len
             )
 
         else:
-            _, url_raw, nl_raw = batch_raw
+            url_raw, nl_raw = batch_raw
 
             model_inputs['input_ids'], model_inputs['attention_mask'] = get_batch_inputs(
                 batch=nl_raw,
                 vocab=nl_vocab,
-                processor=Vocab.sos_processor,
+                processor=Vocab.eos_processor,
                 max_len=args.max_nl_len
             )
 

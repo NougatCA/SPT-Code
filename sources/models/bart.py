@@ -63,7 +63,8 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
         assert self.mode, 'It is required to specific a mode for BART before the model is passed through'
 
         if self.mode == enums.MODE_SEARCH:
-            return self.forward_search(attention_mask=attention_mask,
+            return self.forward_search(input_ids=input_ids,
+                                       attention_mask=attention_mask,
                                        decoder_input_ids=decoder_input_ids,
                                        decoder_attention_mask=decoder_attention_mask,
                                        head_mask=head_mask,

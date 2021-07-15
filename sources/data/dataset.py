@@ -178,7 +178,7 @@ class CodeDataset(Dataset):
                 while True:
                     neg_index = random.randint(0, self.size - 1)
                     neg_nl = self.nls[neg_index]
-                    if avg_bleu(references=[pos_nl.split()], candidates=[neg_nl.split()]) < 0.3:
+                    if avg_bleu(references=[pos_nl.split()], candidates=[neg_nl.split()]) < 0.5:
                         break
                 return self.split, self.codes[index], self.asts[index], self.names[index], pos_nl, neg_nl
             else:
