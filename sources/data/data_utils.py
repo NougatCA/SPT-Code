@@ -610,3 +610,80 @@ def parse_for_search(dataset_dir, lang, split):
         return codes, asts, names, nls
     elif split in ['valid', 'test']:
         return urls, nls
+
+
+def load_clone_mapping(dataset_root):
+    """
+    Load json file and transfer to a mapping from code id to source code.
+
+    Args:
+        dataset_root (str): Root of the dataset
+
+    Returns:
+        dict: Mapping from code id to source code
+
+    """
+    mapping = dict()
+    with open(os.path.join(dataset_root, 'fine_tune', enums.TASK_CLONE_DETECTION, 'data.jsonl'), encoding='utf-8') as f:
+        for line in f.readlines():
+            data = json.loads(line.strip())
+            code_id = data['idx']
+            source = data['func'].strip()
+            mapping[code_id] = source
+    return mapping
+
+
+def parse_for_clone(path, mapping):
+    """
+    Load and parse for code clone detection.
+
+    Args:
+        path (str): Dataset path
+        mapping (dict[int, str]): Mapping from code id to source code
+
+    Returns:
+        list[str], list[str], list[str], list[str], list[str], list[str], list[int]:
+            - List of source code 1 strings
+            - List of ast 1 strings
+            - List of name 1 strings
+            - List of source code 2 strings
+            - List of ast 2 strings
+            - List of name 2 strings
+            - List of label integers
+
+    """
+    codes_1 = []
+    asts_1 = []
+    names_1 = []
+    codes_2 = []
+    asts_2 = []
+    names_2 = []
+    labels = []
+    with open(path, encoding='utf-8') as f:
+        for line in tqdm(f.readlines()):
+            id_1, id_2, label = line.split('\t')
+            try:
+                source_1 = mapping[id_1]
+                source_1 = remove_comments_and_docstrings(source_1, lang=enums.LANG_JAVA)
+                source_1 = replace_string_literal(source_1)
+                ast_1, name_1 = generate_single_ast_nl(source=source_1, lang=enums.LANG_JAVA)
+                code_1 = tokenize_source(source=source_1, lang=enums.LANG_JAVA)
+
+                source_2 = mapping[id_2]
+                source_2 = remove_comments_and_docstrings(source_2, lang=enums.LANG_JAVA)
+                source_2 = replace_string_literal(source_2)
+                ast_2, name_2 = generate_single_ast_nl(source=source_2, lang=enums.LANG_JAVA)
+                code_2 = tokenize_source(source=source_2, lang=enums.LANG_JAVA)
+
+                label = int(label)
+
+                codes_1.append(code_1)
+                asts_1.append(ast_1)
+                names_1.append(name_1)
+                codes_2.append(code_2)
+                asts_2.append(ast_2)
+                names_2.append(name_2)
+                labels.append(label)
+            except Exception:
+                continue
+    return codes_1, asts_1, names_1, codes_2, asts_2, names_2, labels

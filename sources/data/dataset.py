@@ -7,7 +7,7 @@ import re
 
 import enums
 from .data_utils import load_dataset_from_dir, tokenize_source, align_source_code, \
-    regular_tokenize, parse_for_summarization, parse_for_translation, parse_for_search
+    regular_tokenize, parse_for_summarization, parse_for_translation, parse_for_search, parse_for_clone
 from eval.bleu.google_bleu import avg_bleu
 
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class CodeDataset(Dataset):
 
-    def __init__(self, args, mode, task=None, language=None, split=None):
+    def __init__(self, args, mode, task=None, language=None, split=None, clone_mapping=None):
         """
         Initialization definition.
 
@@ -27,6 +27,7 @@ class CodeDataset(Dataset):
                 future support ['completion', 'search', 'clone', 'summarization', 'refinement']
             language (str): Only for downstream fine-tuning
             split (str): Only for downstream fine-tuning, support ['train', 'valid', 'test']
+            clone_mapping (dict[int, str]): Mapping from code id to source code string, use only for clone detection
 
         """
         super(CodeDataset, self).__init__()
@@ -41,7 +42,7 @@ class CodeDataset(Dataset):
         # load pre-training dataset
         if self.mode == 'pre_train':
             self.languages, self.sources, self.codes, self.asts, self.names, self.codes_wo_name, \
-            self.names_wo_name, self.only_names = load_dataset_from_dir(dataset_dir=self.dataset_dir)
+                self.names_wo_name, self.only_names = load_dataset_from_dir(dataset_dir=self.dataset_dir)
             self.size = len(self.codes)
         # load fine-tuning dataset
         else:
@@ -105,6 +106,16 @@ class CodeDataset(Dataset):
                 else:
                     self.urls, self.nls = parse_for_search(dataset_dir=self.dataset_dir, lang=language, split=split)
                     self.size = len(self.urls)
+            # code clone detection
+            elif task == enums.TASK_CLONE_DETECTION:
+                assert split in ['train', 'valid', 'test']
+                self.codes_1, self.asts_1, self.names_1, \
+                    self.codes_2, self.asts_2, self.names_2, self.labels = parse_for_clone(
+                        path=os.path.join(self.dataset_dir, f'{split}.txt'),
+                        mapping=clone_mapping)
+                assert len(self.codes_1) == len(self.asts_1) == len(self.names_1) \
+                       == len(self.codes_2) == len(self.asts_2) == len(self.names_2) == len(self.labels)
+                self.size = len(self.codes_1)
 
     def __getitem__(self, index):
         # cap
@@ -172,6 +183,10 @@ class CodeDataset(Dataset):
                 return self.split, self.codes[index], self.asts[index], self.names[index], pos_nl, neg_nl
             else:
                 return self.split, self.urls[index], self.nls[index]
+        # clone detection
+        elif self.task == enums.TASK_CLONE_DETECTION:
+            return self.codes_1[index], self.asts_1[index], self.names_1[index], \
+                   self.codes_2[index], self.asts_2[index], self.names_2[index], self.labels[index]
 
     def __len__(self):
         return self.size

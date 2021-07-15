@@ -8,6 +8,7 @@ TASK_METHOD_NAME_PREDICTION = 'mnp'
 TASK_SUMMARIZATION = 'summarization'
 TASK_TRANSLATION = 'translation'
 TASK_SEARCH = 'search'
+TASK_CLONE_DETECTION = 'clone'
 
 # programming language
 LANG_JAVA = 'java'
