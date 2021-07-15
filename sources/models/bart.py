@@ -469,6 +469,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             scores.append(score)
 
         self.train()
+        self.set_model_mode(enums.MODE_SEARCH)
 
         results = {f'{metrics_prefix}_mrr': np.mean(scores),
                    f'{metrics_prefix}_ranks': ranks,
