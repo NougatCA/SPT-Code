@@ -9,7 +9,7 @@ from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab
 from data.dataset import CodeDataset
 from utils.general import count_params, human_format, layer_wise_parameters
-from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics, exact_ir_metrics
+from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics, accuracy_for_sequence
 from utils.callbacks import LogStateCallBack
 from utils.trainer import CodeTrainer
 import enums
@@ -151,8 +151,10 @@ def run_summarization(
     # compute metrics
     def compute_valid_metrics(eval_preds):
         decoded_labels, decoded_preds = decode_preds(eval_preds)
+        refs = [ref.strip().split() for ref in decoded_labels]
+        cans = [can.strip().split() for can in decoded_preds]
         result = {}
-        result.update(bleu(references=decoded_labels, candidates=decoded_preds))
+        result.update(bleu(references=refs, candidates=cans))
         return result
 
     def compute_test_metrics(eval_preds):
@@ -164,7 +166,7 @@ def run_summarization(
         result.update(meteor(references=refs, candidates=cans))
         result.update(rouge_l(references=refs, candidates=cans))
         result.update(avg_ir_metrics(references=refs, candidates=cans))
-        result.update(exact_ir_metrics(references=refs, candidates=cans))
+        result.update(accuracy_for_sequence(references=refs, candidates=cans))
         return result
 
     training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_SUMMARIZATION),
@@ -191,8 +193,8 @@ def run_summarization(
                                              dataloader_drop_last=False,
                                              run_name=args.model_name,
                                              load_best_model_at_end=True,
-                                             metric_for_best_model=args.valid_metric,
-                                             greater_is_better=not args.valid_metric.endswith('loss'),
+                                             metric_for_best_model='bleu',
+                                             greater_is_better=True,
                                              ignore_data_skip=False,
                                              label_smoothing_factor=args.label_smoothing,
                                              dataloader_pin_memory=True,
@@ -232,13 +234,13 @@ def run_summarization(
         # --------------------------------------------------
         # eval
         # --------------------------------------------------
-        logger.info('-' * 100)
-        logger.info('Start evaluating')
-        eval_metrics = trainer.evaluate(metric_key_prefix='valid',
-                                        max_length=args.max_decode_step,
-                                        num_beams=args.beam_width)
-        trainer.log_metrics(split='valid', metrics=eval_metrics)
-        trainer.save_metrics(split='valid', metrics=eval_metrics)
+        # logger.info('-' * 100)
+        # logger.info('Start evaluating')
+        # eval_metrics = trainer.evaluate(metric_key_prefix='valid',
+        #                                 max_length=args.max_decode_step,
+        #                                 num_beams=args.beam_width)
+        # trainer.log_metrics(split='valid', metrics=eval_metrics)
+        # trainer.save_metrics(split='valid', metrics=eval_metrics)
 
     # --------------------------------------------------
     # predict
