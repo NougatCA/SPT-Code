@@ -9,7 +9,7 @@ from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab
 from data.dataset import CodeDataset
 from utils.general import count_params, human_format, layer_wise_parameters
-from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics
+from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics, exact_ir_metrics
 from utils.callbacks import LogStateCallBack
 from utils.trainer import CodeTrainer
 import enums
@@ -164,6 +164,7 @@ def run_summarization(
         result.update(meteor(references=refs, candidates=cans))
         result.update(rouge_l(references=refs, candidates=cans))
         result.update(avg_ir_metrics(references=refs, candidates=cans))
+        result.update(exact_ir_metrics(references=refs, candidates=cans))
         return result
 
     training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_SUMMARIZATION),
