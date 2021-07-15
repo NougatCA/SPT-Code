@@ -158,19 +158,19 @@
 #
 #
 
-import json
-import random
-import re
-
-
-def lang_sample(lang):
-    with open(f'../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
-        line = f.readlines()[random.randint(0, 1000)]
-        data = json.loads(line.strip())
-        name = data['func_name']
-        source = data['code']
-        code = ' '.join(data['code_tokens'])
-    return source, code, name
+# import json
+# import random
+# import re
+#
+#
+# def lang_sample(lang):
+#     with open(f'../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
+#         line = f.readlines()[random.randint(0, 1000)]
+#         data = json.loads(line.strip())
+#         name = data['func_name']
+#         source = data['code']
+#         code = ' '.join(data['code_tokens'])
+#     return source, code, name
 # #
 # #
 # # def sample_separation_position(source):
@@ -231,16 +231,30 @@ def lang_sample(lang):
 # print('\n'.join(regular_tokenize(source)))
 
 
-import numpy as np
+# import numpy as np
+#
+#
+# vectors = []
+# for i in range(10):
+#     rep = np.random.rand(16, 256)
+#     vectors.append(rep)
+# vectors.append(np.random.rand(10, 256))
+#
+# vectors = np.concatenate(vectors, 0)
+# print(vectors.shape)
 
 
-vectors = []
-for i in range(10):
-    rep = np.random.rand(16, 256)
-    vectors.append(rep)
-vectors.append(np.random.rand(10, 256))
+batch = [('a1', 'b1'),
+         ('a2', 'b2'),
+         ('a3', 'b3')]
+a, b = map(list, zip(*batch))
+print(a)
+print(b)
 
-vectors = np.concatenate(vectors, 0)
-print(vectors.shape)
+model_inputs = {'input_ids': a, 'attention_mask': b}
+model_inputs['urls'] = ['dfadf', 'dfadf']
 
-
+print(model_inputs)
+urls = model_inputs.pop('urls')
+print(urls)
+print(model_inputs)

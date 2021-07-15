@@ -5,6 +5,7 @@ import logging
 
 from models.bart import BartForClassificationAndGeneration
 from .timer import Timer
+from .early_stopping import EarlyStopping
 import enums
 
 
@@ -34,8 +35,9 @@ class LogStateCallBack(TrainerCallback):
 
 class SearchValidCallBack(TrainerCallback):
 
-    def __init__(self, codebase_dataloader: torch.utils.data.dataloader.DataLoader):
+    def __init__(self, codebase_dataloader: torch.utils.data.dataloader.DataLoader, early_stop_patience):
         self.codebase_dataloader = codebase_dataloader
+        self.early_stopping = EarlyStopping(patience=early_stop_patience, higher_better=True)
 
     def on_epoch_end(self,
                      args: TrainingArguments,
@@ -49,3 +51,14 @@ class SearchValidCallBack(TrainerCallback):
         logger.info("  Num codes = %d", len(self.codebase_dataloader.dataset))
         logger.info("  Batch size = %d", args.eval_batch_size)
 
+        results = model.evaluate_search(query_dataloader=eval_dataloader,
+                                        codebase_dataloader=self.codebase_dataloader,
+                                        metrics_prefix='valid')
+
+        mrr = results['valid_mrr']
+        self.early_stopping(score=mrr, model=None, epoch=state.epoch)
+
+        if self.early_stopping.refreshed:
+            control.should_save = True
+        if self.early_stopping.early_stop:
+            control.should_training_stop = True

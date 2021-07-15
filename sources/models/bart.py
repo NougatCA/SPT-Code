@@ -413,26 +413,66 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
 
     def evaluate_search(self,
                         query_dataloader: torch.utils.data.dataloader.DataLoader,
-                        codebase_dataloader: torch.utils.data.dataloader.DataLoader):
+                        codebase_dataloader: torch.utils.data.dataloader.DataLoader,
+                        metrics_prefix: str):
 
         self.set_model_mode(enums.MODE_CLS)
         self.eval()
 
+        # embed query and codebase
         with torch.no_grad():
-            logger.info('(1/2) Embedding search queries')
+            logger.info('(1/3) Embedding search queries')
             query_vectors = []
+            ref_urls = []
             for _, batch in enumerate(tqdm(query_dataloader)):
+                urls = batch.pop('urls')
+                ref_urls += urls
                 representation, outputs = self.forward_representation(**batch)  # representation: [B, H]
                 representation = representation.cpu().numpy()   # [B, H]
                 query_vectors.append(representation)
             query_vectors = np.vstack(query_vectors)    # [len_query, H]
 
-            logger.info('(2/2) Embedding candidate codes')
+            logger.info('(2/3) Embedding candidate codes')
             code_vectors = []
+            code_urls = []
             for _, batch in enumerate(tqdm(codebase_dataloader)):
+                urls = batch.pop('urls')
+                code_urls += urls
                 representation, outputs = self.forward_representation(**batch)
                 representation = representation.cpu().numpy()
                 code_vectors.append(representation)
             code_vectors = np.vstack(code_vectors)  # [len_code, H]
 
+        # calculate MRR
+        logger.info('(3/3) Calculating metrics')
+        scores = []
+        ranks = []
+        can_urls = []
+        can_sims = []
+        for query_vector, ref_url in zip(query_vectors, ref_urls):
+            sims = []
+            for code_vector, code_url in zip(code_vectors, code_urls):
+                sim = f.cosine_similarity(code_vector, query_vector)
+                sims.append((code_url, sim))
+            sims.sort(key=lambda item: item[1])
 
+            sims = sims[:1000]
+            can_urls.append(sims[0][0])
+            can_sims.append(sims[0][1])
+
+            rank = -1
+            for index, (url, sim) in enumerate(sims):
+                if url == ref_url:
+                    rank = index + 1
+            ranks.append(rank)
+            score = 1 / rank if rank != -1 else 0
+            scores.append(score)
+
+        self.train()
+
+        results = {f'{metrics_prefix}_mrr': np.mean(scores),
+                   f'{metrics_prefix}_ranks': ranks,
+                   f'{metrics_prefix}_ref_urls': ref_urls,
+                   f'{metrics_prefix}_can_urls': can_urls,
+                   f'{metrics_prefix}_can_sims': can_sims}
+        return results

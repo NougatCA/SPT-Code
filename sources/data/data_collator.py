@@ -161,7 +161,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
         split = batch_raw[0][0]
 
         if split == 'codebase':
-            _, code_raw, ast_raw, name_raw = batch_raw
+            _, url_raw, code_raw, ast_raw, name_raw = batch_raw
 
             model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(
                 code_raw=code_raw,
@@ -174,6 +174,8 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                 nl_vocab=nl_vocab,
                 max_nl_len=args.max_nl_len
             )
+
+            model_inputs['urls'] = url_raw
 
         elif split == 'train':
             _, code_raw, ast_raw, name_raw, nl_raw, neg_nl_raw = batch_raw
@@ -205,7 +207,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             )
 
         else:
-            _, nl_raw = batch_raw
+            _, url_raw, nl_raw = batch_raw
 
             model_inputs['input_ids'], model_inputs['attention_mask'] = get_batch_inputs(
                 batch=nl_raw,
@@ -213,6 +215,8 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                 processor=Vocab.sos_processor,
                 max_len=args.max_nl_len
             )
+
+            model_inputs['urls'] = url_raw
 
     return model_inputs
 

@@ -1,5 +1,6 @@
 from transformers import BartConfig, Seq2SeqTrainingArguments, EarlyStoppingCallback, \
     IntervalStrategy, SchedulerType
+from torch.utils.data.dataloader import DataLoader
 
 import logging
 from typing import Union, Tuple
@@ -10,9 +11,9 @@ from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab
 from data.dataset import CodeDataset
 from utils.general import count_params, human_format, layer_wise_parameters
-from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics
 from utils.callbacks import LogStateCallBack, SearchValidCallBack
 from utils.trainer import CodeTrainer
+from data.data_collator import collate_fn
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,14 @@ def run_search(
                                       language=args.search_language,
                                       split=split)
         logger.info(f'The size of {split} set: {len(datasets[split])}')
+    codebase_dataloader = DataLoader(dataset=datasets['codebase'],
+                                     batch_size=args.eval_batch_size,
+                                     collate_fn=lambda batch: collate_fn(batch,
+                                                                         args=args,
+                                                                         task=enums.TASK_SEARCH,
+                                                                         code_vocab=code_vocab,
+                                                                         nl_vocab=nl_vocab,
+                                                                         ast_vocab=ast_vocab))
     logger.info('Datasets loaded successfully')
 
     # --------------------------------------------------
@@ -186,9 +195,9 @@ def run_search(
                           model_init=None,
                           compute_metrics=None,
                           callbacks=[
-                              EarlyStoppingCallback(early_stopping_patience=args.early_stop_patience),
                               LogStateCallBack(),
-                              SearchValidCallBack()])
+                              SearchValidCallBack(codebase_dataloader=codebase_dataloader,
+                                                  early_stop_patience=args.early_stop_patience)])
     logger.info('Running configurations initialized successfully')
 
     # --------------------------------------------------
@@ -210,35 +219,35 @@ def run_search(
     # --------------------------------------------------
     logger.info('-' * 100)
     logger.info('Start testing')
-    predict_results = trainer.predict(test_dataset=datasets['test'],
-                                      metric_key_prefix='test',
-                                      max_length=args.max_decode_step,
-                                      num_beams=args.beam_width)
-    predict_metrics = predict_results.metrics
-    references = predict_metrics.pop('test_references')
-    candidates = predict_metrics.pop('test_candidates')
+    predict_metrics = model.evaluate_search(query_dataloader=trainer.get_train_dataloader(),
+                                            codebase_dataloader=codebase_dataloader,
+                                            metrics_prefix='test')
+    ranks = predict_metrics.pop('test_ranks')
+    ref_urls = predict_metrics.pop('test_ref_urls')
+    can_urls = predict_metrics.pop('can_can_urls')
+    can_sims = predict_metrics.pop('test_can_sims')
     trainer.log_metrics(split='test', metrics=predict_metrics)
     trainer.save_metrics(split='test', metrics=predict_metrics)
     # save testing results
-    with open(os.path.join(args.output_root, 'test_results.txt'), mode='w', encoding='utf-8') as result_f, \
-            open(os.path.join(args.output_root, 'test_refs.txt'), mode='w', encoding='utf-8') as refs_f, \
-            open(os.path.join(args.output_root, 'test_cans.txt'), mode='w', encoding='utf-8') as cans_f:
+    with open(os.path.join(args.output_root, f'{enums.TASK_SEARCH}_test_results.txt'),
+              mode='w', encoding='utf-8') as result_f, \
+            open(os.path.join(args.output_root, f'{enums.TASK_SEARCH}_test_refs.txt'),
+                 mode='w', encoding='utf-8') as refs_f, \
+            open(os.path.join(args.output_root, f'{enums.TASK_SEARCH}_test_cans.txt'),
+                 mode='w', encoding='utf-8') as cans_f:
         sample_id = 0
-        for reference, candidate in zip(references, candidates):
+        for rank, ref_url, can_url, can_sim in zip(ranks, ref_urls, can_urls, can_sims):
             result_f.write(f'sample {sample_id}:\n')
             sample_id += 1
-            result_f.write(f'reference: {reference}\n')
-            result_f.write(f'candidate: {candidate}\n')
+            result_f.write(f'rank: {rank}\n')
+            result_f.write(f'reference_url: {ref_url}\n')
+            result_f.write(f'first_candidate_url: {can_url}\n')
+            result_f.write(f'first_candidate_similarity: {can_sim}\n')
             result_f.write('\n')
-            refs_f.write(reference + '\n')
-            cans_f.write(candidate + '\n')
+            refs_f.write(ref_url + '\n')
+            cans_f.write(can_url + '\n')
         for name, score in predict_metrics.items():
             result_f.write(f'{name}: {score}\n')
     logger.info('Testing finished')
     for name, score in predict_metrics.items():
         logger.info(f'{name}: {score}')
-
-
-def eval_search():
-
-
