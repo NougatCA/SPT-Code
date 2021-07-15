@@ -1,5 +1,4 @@
-from transformers import BartConfig, Seq2SeqTrainingArguments, EarlyStoppingCallback, \
-    IntervalStrategy, SchedulerType
+from transformers import BartConfig, TrainingArguments, IntervalStrategy, SchedulerType
 from torch.utils.data.dataloader import DataLoader
 
 import logging
@@ -12,7 +11,7 @@ from data.vocab import Vocab, load_vocab
 from data.dataset import CodeDataset
 from utils.general import count_params, human_format, layer_wise_parameters
 from utils.callbacks import LogStateCallBack, SearchValidCallBack
-from utils.trainer import CodeTrainer
+from utils.trainer import CodeCLSTrainer
 from data.data_collator import collate_fn
 
 logger = logging.getLogger(__name__)
@@ -151,53 +150,52 @@ def run_search(
     logger.info('-' * 100)
     logger.info('Initializing the running configurations')
 
-    training_args = Seq2SeqTrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_SEARCH),
-                                             overwrite_output_dir=True,
-                                             do_train=True,
-                                             do_eval=False,
-                                             do_predict=False,
-                                             evaluation_strategy=IntervalStrategy.NO,
-                                             prediction_loss_only=False,
-                                             per_device_train_batch_size=args.batch_size,
-                                             per_device_eval_batch_size=args.eval_batch_size,
-                                             gradient_accumulation_steps=1,
-                                             learning_rate=args.learning_rate,
-                                             weight_decay=args.lr_decay_rate,
-                                             max_grad_norm=args.grad_clipping_norm,
-                                             num_train_epochs=args.n_epoch,
-                                             lr_scheduler_type=SchedulerType.LINEAR,
-                                             warmup_steps=args.warmup_steps,
-                                             logging_dir=os.path.join(args.tensor_board_root, enums.TASK_SEARCH),
-                                             logging_strategy=IntervalStrategy.STEPS,
-                                             logging_steps=args.tensor_board_logging_steps,
-                                             save_strategy=IntervalStrategy.EPOCH,
-                                             seed=args.random_seed,
-                                             dataloader_drop_last=False,
-                                             run_name=args.model_name,
-                                             load_best_model_at_end=True,
-                                             metric_for_best_model=None,
-                                             greater_is_better=None,
-                                             ignore_data_skip=False,
-                                             label_smoothing_factor=args.label_smoothing,
-                                             dataloader_pin_memory=True,
-                                             predict_with_generate=True)
-    trainer = CodeTrainer(main_args=args,
-                          code_vocab=code_vocab,
-                          ast_vocab=ast_vocab,
-                          nl_vocab=nl_vocab,
-                          task=enums.TASK_SEARCH,
-                          model=model,
-                          args=training_args,
-                          data_collator=None,
-                          train_dataset=datasets['train'] if 'train' in datasets else None,
-                          eval_dataset=datasets['valid'] if 'valid' in datasets else None,
-                          tokenizer=nl_vocab,
-                          model_init=None,
-                          compute_metrics=None,
-                          callbacks=[
-                              LogStateCallBack(),
-                              SearchValidCallBack(codebase_dataloader=codebase_dataloader,
-                                                  early_stop_patience=args.early_stop_patience)])
+    training_args = TrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_SEARCH),
+                                      overwrite_output_dir=True,
+                                      do_train=True,
+                                      do_eval=False,
+                                      do_predict=False,
+                                      evaluation_strategy=IntervalStrategy.NO,
+                                      prediction_loss_only=False,
+                                      per_device_train_batch_size=args.batch_size,
+                                      per_device_eval_batch_size=args.eval_batch_size,
+                                      gradient_accumulation_steps=1,
+                                      learning_rate=args.learning_rate,
+                                      weight_decay=args.lr_decay_rate,
+                                      max_grad_norm=args.grad_clipping_norm,
+                                      num_train_epochs=args.n_epoch,
+                                      lr_scheduler_type=SchedulerType.LINEAR,
+                                      warmup_steps=args.warmup_steps,
+                                      logging_dir=os.path.join(args.tensor_board_root, enums.TASK_SEARCH),
+                                      logging_strategy=IntervalStrategy.STEPS,
+                                      logging_steps=args.tensor_board_logging_steps,
+                                      save_strategy=IntervalStrategy.EPOCH,
+                                      seed=args.random_seed,
+                                      dataloader_drop_last=False,
+                                      run_name=args.model_name,
+                                      load_best_model_at_end=True,
+                                      metric_for_best_model=None,
+                                      greater_is_better=None,
+                                      ignore_data_skip=False,
+                                      label_smoothing_factor=args.label_smoothing,
+                                      dataloader_pin_memory=True)
+    trainer = CodeCLSTrainer(main_args=args,
+                             code_vocab=code_vocab,
+                             ast_vocab=ast_vocab,
+                             nl_vocab=nl_vocab,
+                             task=enums.TASK_SEARCH,
+                             model=model,
+                             args=training_args,
+                             data_collator=None,
+                             train_dataset=datasets['train'] if 'train' in datasets else None,
+                             eval_dataset=datasets['valid'] if 'valid' in datasets else None,
+                             tokenizer=nl_vocab,
+                             model_init=None,
+                             compute_metrics=None,
+                             callbacks=[
+                                 LogStateCallBack(),
+                                 SearchValidCallBack(codebase_dataloader=codebase_dataloader,
+                                                     early_stop_patience=args.early_stop_patience)])
     logger.info('Running configurations initialized successfully')
 
     # --------------------------------------------------
@@ -224,7 +222,7 @@ def run_search(
                                             metrics_prefix='test')
     ranks = predict_metrics.pop('test_ranks')
     ref_urls = predict_metrics.pop('test_ref_urls')
-    can_urls = predict_metrics.pop('can_can_urls')
+    can_urls = predict_metrics.pop('test_can_urls')
     can_sims = predict_metrics.pop('test_can_sims')
     trainer.log_metrics(split='test', metrics=predict_metrics)
     trainer.save_metrics(split='test', metrics=predict_metrics)
