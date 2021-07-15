@@ -25,11 +25,11 @@ class Vocab(object):
     EOS_TOKEN = '[EOS]'     # end of sequence
     UNK_TOKEN = '[UNK]'     # unknown token
     MSK_TOKEN = '[MSK]'     # mask token
-    # SEP_TOKEN = '[SEP]'     # sentence separator token
+    SEP_TOKEN = '[SEP]'     # sentence separator token
     # CLS_TOKEN = '[CLS]'     # classification placeholder
 
     # default special symbols, if need additional symbols, use init parameter 'additional_special_symbols'
-    START_VOCAB = [PAD_TOKEN, SOS_TOKEN, EOS_TOKEN, UNK_TOKEN, MSK_TOKEN]
+    START_VOCAB = [PAD_TOKEN, SOS_TOKEN, EOS_TOKEN, UNK_TOKEN, MSK_TOKEN, SEP_TOKEN]
 
     # post-processors
     # bert processor: add SOS at the beginning and SEP at the end of sequence
@@ -42,8 +42,8 @@ class Vocab(object):
     eos_processor = TemplateProcessing(single=f'$ {EOS_TOKEN}', pair=f'$A $B {EOS_TOKEN}',
                                        special_tokens=[(EOS_TOKEN, START_VOCAB.index(EOS_TOKEN))])
     # sep processor: add SEP at the end of sequence
-    # sep_processor = TemplateProcessing(single=f'$ {SEP_TOKEN}', pair=f'$A $B {SEP_TOKEN}',
-    #                                    special_tokens=[(SEP_TOKEN, START_VOCAB.index(SEP_TOKEN))])
+    sep_processor = TemplateProcessing(single=f'$ {SEP_TOKEN}', pair=f'$A $B {SEP_TOKEN}',
+                                       special_tokens=[(SEP_TOKEN, START_VOCAB.index(SEP_TOKEN))])
 
     def __init__(
             self,
