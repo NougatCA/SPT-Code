@@ -1,6 +1,7 @@
 
 from collections import Counter
 import re
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
 from .bleu.google_bleu import avg_bleu
 from .meteor.meteor import Meteor
@@ -8,6 +9,24 @@ from .rouge.rouge import Rouge
 
 
 def ir_metrics(references, candidates):
+    """
+    An ir metrics for binary classification.
+
+    Args:
+        references (list[int]): A list of references, each reference should be 0 or 1
+        candidates (list[int]): A list of candidates, each candidate should be 0 or 1
+
+    Returns:
+        dict[str, int]: Mapping metric names to scores
+
+    """
+    p = precision_score(y_true=references, y_pred=candidates)
+    r = recall_score(y_true=references, y_pred=candidates)
+    f1 = f1_score(y_true=references, y_pred=candidates)
+    return {'precision': p, 'recall': r, 'f1': f1}
+
+
+def __ir_metrics(references, candidates):
     """
     An ir metrics for a list of references and candidates, each of both is a single token so that need exact match.
 
@@ -49,7 +68,7 @@ def avg_ir_metrics(references, candidates):
     """
     total_p, total_r, total_f1 = 0, 0, 0
     for reference, candidate in zip(references, candidates):
-        p, r, f1 = ir_metrics(references=reference, candidates=candidate)
+        p, r, f1 = __ir_metrics(references=reference, candidates=candidate)
 
         total_p += p
         total_r += r
@@ -74,34 +93,81 @@ def remove_white_characters(tokens):
     return re.sub(r'\s', '', s)
 
 
-def exact_ir_metrics(references, candidates):
+def accuracy_for_sequence(references, candidates):
     """
-    Calculate precision, recall and f1 score,
+        Calculate accuracy,
+            this version of ir metrics calculate scores of each candidate in candidates
+            which match the corresponding reference exactly (except white characters).
+
+        Args:
+            references (list[list[str]]): A list of references, each reference should be a list of tokens
+            candidates (list[list[str]]): A list of candidates, each candidate should be a list of tokens
+
+        Returns:
+            dict[str, float]: Dict of mapping ir metric names to scores
+        """
+    references = [remove_white_characters(reference) for reference in references]
+    candidates = [remove_white_characters(candidate) for candidate in candidates]
+    return accuracy(references=references, candidates=candidates)
+
+
+def accuracy(references, candidates):
+    """
+    Calculate accuracy,
         this version of ir metrics calculate scores of each candidate in candidates
         which match the corresponding reference exactly (except white characters).
+
+    Args:
+        references (list): A list of references, each reference should be an object
+        candidates (list): A list of candidates, each candidate should be an object
+
+    Returns:
+        dict[str, float]: Dict of mapping ir metric names to scores
+    """
+    acc = accuracy_score(y_true=references, y_pred=candidates)
+    return {'accuracy': acc}
+
+
+def bleu(references, candidates):
+    """
+    Calculate avg BLEU.
 
     Args:
         references (list[list[str]]): A list of references, each reference should be tokenized into a list of tokens
         candidates (list[list[str]]): A list of candidates, each candidate should be tokenized into a list of tokens
 
     Returns:
-        dict: Dict of mapping ir metric names to scores
+        dict[str, float]: Dict of mapping metric name and avg score
     """
-    text_references = [remove_white_characters(ref) for ref in references]
-    text_candidates = [remove_white_characters(can) for can in candidates]
-    p, r, f1 = ir_metrics(references=text_references, candidates=text_candidates)
-    return {'exact_precision': p, 'exact_recall': r, 'exact_f1': f1}
-
-
-def bleu(references, candidates):
     return {'bleu': avg_bleu(references=references, candidates=candidates)}
 
 
 def meteor(references, candidates):
+    """
+    Calculate avg METEOR.
+
+    Args:
+        references (list[list[str]]): A list of references, each reference should be tokenized into a list of tokens
+        candidates (list[list[str]]): A list of candidates, each candidate should be tokenized into a list of tokens
+
+    Returns:
+        dict[str, float]: Dict of mapping metric name and avg score
+    """
     meteor_calculator = Meteor()
     return {'meteor': meteor_calculator.compute_score(references=references, candidates=candidates)[0]}
 
 
 def rouge_l(references, candidates):
+    """
+    Calculate avg ROUGE-L.
+
+    Args:
+        references (list[list[str]]): A list of references, each reference should be tokenized into a list of tokens
+        candidates (list[list[str]]): A list of candidates, each candidate should be tokenized into a list of tokens
+
+    Returns:
+        dict[str, float]: Dict of mapping metric name and avg score
+
+    """
     rouge_calculator = Rouge()
     return {'rouge-l': rouge_calculator.compute_score(references=references, candidates=candidates)[0]}
