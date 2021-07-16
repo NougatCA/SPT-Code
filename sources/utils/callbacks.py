@@ -2,6 +2,7 @@ import torch
 from transformers import TrainerCallback, TrainingArguments, TrainerState, TrainerControl
 
 import logging
+from typing import Dict
 
 from models.bart import BartForClassificationAndGeneration
 from .timer import Timer
@@ -22,6 +23,7 @@ class LogStateCallBack(TrainerCallback):
                        control: TrainerControl,
                        **kwargs):
         self.epoch_timer.reset()
+        logger.debug(f'Start epoch {state.epoch}')
 
     def on_epoch_end(self,
                      args: TrainingArguments,
@@ -31,6 +33,16 @@ class LogStateCallBack(TrainerCallback):
                      **kwargs):
         logger.debug('Epoch {} finished, time: {:.2f}s'.format(state.epoch, self.epoch_timer.time()))
         logger.debug('learning rate: {:.6f}'.format(optimizer.param_groups[0]['lr']))
+
+    def on_evaluate(self,
+                    args: TrainingArguments,
+                    state: TrainerState,
+                    control: TrainerControl,
+                    metrics: Dict[str, float],
+                    **kwargs):
+        logger.debug(f'Evaluation after epoch {state.epoch} finished')
+        for metric, value in metrics.items():
+            logger.debug(f'{metric}: {value}')
 
 
 class SearchValidCallBack(TrainerCallback):
