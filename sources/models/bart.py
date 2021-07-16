@@ -12,6 +12,7 @@ import numpy as np
 import logging
 
 import enums
+from .utils import inputs_to_cuda
 
 logger = logging.getLogger(__name__)
 
@@ -428,6 +429,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             for _, batch in enumerate(tqdm(query_dataloader)):
                 urls = batch.pop('urls')
                 ref_urls += urls
+                batch = inputs_to_cuda(batch)
                 representation, outputs = self.forward_representation(**batch)  # representation: [B, H]
                 representation = representation.cpu().numpy()   # [B, H]
                 query_vectors.append(representation)
@@ -439,35 +441,37 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
             for _, batch in enumerate(tqdm(codebase_dataloader)):
                 urls = batch.pop('urls')
                 code_urls += urls
+                batch = inputs_to_cuda(batch)
                 representation, outputs = self.forward_representation(**batch)
                 representation = representation.cpu().numpy()
                 code_vectors.append(representation)
             code_vectors = np.vstack(code_vectors)  # [len_code, H]
 
-        # calculate MRR
-        logger.info('(3/3) Calculating metrics')
-        scores = []
-        ranks = []
-        can_urls = []
-        can_sims = []
-        for query_vector, ref_url in zip(query_vectors, ref_urls):
-            sims = []
-            for code_vector, code_url in zip(code_vectors, code_urls):
-                sim = f.cosine_similarity(code_vector, query_vector)
-                sims.append((code_url, sim))
-            sims.sort(key=lambda item: item[1])
+            # calculate MRR
+            logger.info('(3/3) Calculating metrics')
+            scores = []
+            ranks = []
+            can_urls = []
+            can_sims = []
+            for query_vector, ref_url in tqdm(zip(query_vectors, ref_urls), total=len(query_vectors)):
+                sims = []
+                for code_vector, code_url in zip(code_vectors, code_urls):
+                    sim = f.cosine_similarity(torch.from_numpy(code_vector).unsqueeze(0),
+                                              torch.from_numpy(query_vector).unsqueeze(0))
+                    sims.append((code_url, sim.item()))
+                sims.sort(key=lambda item: item[1])
 
-            sims = sims[:1000]
-            can_urls.append(sims[0][0])
-            can_sims.append(sims[0][1])
+                sims = sims[:1000]
+                can_urls.append(sims[0][0])
+                can_sims.append(sims[0][1])
 
-            rank = -1
-            for index, (url, sim) in enumerate(sims):
-                if url == ref_url:
-                    rank = index + 1
-            ranks.append(rank)
-            score = 1 / rank if rank != -1 else 0
-            scores.append(score)
+                rank = -1
+                for index, (url, sim) in enumerate(sims):
+                    if url == ref_url:
+                        rank = index + 1
+                ranks.append(rank)
+                score = 1 / rank if rank != -1 else 0
+                scores.append(score)
 
         self.train()
         self.set_model_mode(enums.MODE_SEARCH)
