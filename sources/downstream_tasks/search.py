@@ -147,61 +147,70 @@ def run_search(
     # --------------------------------------------------
     # trainer
     # --------------------------------------------------
-    logger.info('-' * 100)
-    logger.info('Initializing the running configurations')
-
-    training_args = TrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_SEARCH),
-                                      overwrite_output_dir=True,
-                                      do_train=True,
-                                      do_eval=False,
-                                      do_predict=False,
-                                      evaluation_strategy=IntervalStrategy.NO,
-                                      prediction_loss_only=False,
-                                      per_device_train_batch_size=args.batch_size,
-                                      per_device_eval_batch_size=args.eval_batch_size,
-                                      gradient_accumulation_steps=1,
-                                      learning_rate=args.learning_rate,
-                                      weight_decay=args.lr_decay_rate,
-                                      max_grad_norm=args.grad_clipping_norm,
-                                      num_train_epochs=args.n_epoch,
-                                      lr_scheduler_type=SchedulerType.LINEAR,
-                                      warmup_steps=args.warmup_steps,
-                                      logging_dir=os.path.join(args.tensor_board_root, enums.TASK_SEARCH),
-                                      logging_strategy=IntervalStrategy.STEPS,
-                                      logging_steps=args.tensor_board_logging_steps,
-                                      save_strategy=IntervalStrategy.EPOCH,
-                                      seed=args.random_seed,
-                                      dataloader_drop_last=False,
-                                      run_name=args.model_name,
-                                      load_best_model_at_end=True,
-                                      metric_for_best_model=None,
-                                      greater_is_better=None,
-                                      ignore_data_skip=False,
-                                      label_smoothing_factor=args.label_smoothing,
-                                      dataloader_pin_memory=True)
-    trainer = CodeCLSTrainer(main_args=args,
-                             code_vocab=code_vocab,
-                             ast_vocab=ast_vocab,
-                             nl_vocab=nl_vocab,
-                             task=enums.TASK_SEARCH,
-                             model=model,
-                             args=training_args,
-                             data_collator=None,
-                             train_dataset=datasets['train'] if 'train' in datasets else None,
-                             eval_dataset=datasets['valid'] if 'valid' in datasets else None,
-                             tokenizer=nl_vocab,
-                             model_init=None,
-                             compute_metrics=None,
-                             callbacks=[
-                                 LogStateCallBack(),
-                                 SearchValidCallBack(codebase_dataloader=codebase_dataloader,
-                                                     early_stop_patience=args.early_stop_patience)])
-    logger.info('Running configurations initialized successfully')
-
-    # --------------------------------------------------
-    # train
-    # --------------------------------------------------
     if not only_test:
+        logger.info('-' * 100)
+        logger.info('Initializing the running configurations')
+
+        valid_dataloader = DataLoader(dataset=datasets['valid'],
+                                      batch_size=args.eval_batch_size,
+                                      collate_fn=lambda batch: collate_fn(batch,
+                                                                          args=args,
+                                                                          task=enums.TASK_SEARCH,
+                                                                          code_vocab=code_vocab,
+                                                                          nl_vocab=nl_vocab,
+                                                                          ast_vocab=ast_vocab))
+        training_args = TrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_SEARCH),
+                                          overwrite_output_dir=True,
+                                          do_train=True,
+                                          do_eval=False,
+                                          do_predict=False,
+                                          evaluation_strategy=IntervalStrategy.NO,
+                                          prediction_loss_only=False,
+                                          per_device_train_batch_size=args.batch_size,
+                                          per_device_eval_batch_size=args.eval_batch_size,
+                                          gradient_accumulation_steps=1,
+                                          learning_rate=args.learning_rate,
+                                          weight_decay=args.lr_decay_rate,
+                                          max_grad_norm=args.grad_clipping_norm,
+                                          num_train_epochs=args.n_epoch,
+                                          lr_scheduler_type=SchedulerType.LINEAR,
+                                          warmup_steps=args.warmup_steps,
+                                          logging_dir=os.path.join(args.tensor_board_root, enums.TASK_SEARCH),
+                                          logging_strategy=IntervalStrategy.STEPS,
+                                          logging_steps=args.tensor_board_logging_steps,
+                                          save_strategy=IntervalStrategy.EPOCH,
+                                          seed=args.random_seed,
+                                          dataloader_drop_last=False,
+                                          run_name=args.model_name,
+                                          load_best_model_at_end=True,
+                                          metric_for_best_model=None,
+                                          greater_is_better=None,
+                                          ignore_data_skip=False,
+                                          label_smoothing_factor=args.label_smoothing,
+                                          dataloader_pin_memory=True)
+        trainer = CodeCLSTrainer(main_args=args,
+                                 code_vocab=code_vocab,
+                                 ast_vocab=ast_vocab,
+                                 nl_vocab=nl_vocab,
+                                 task=enums.TASK_SEARCH,
+                                 model=model,
+                                 args=training_args,
+                                 data_collator=None,
+                                 train_dataset=datasets['train'],
+                                 eval_dataset=None,
+                                 tokenizer=nl_vocab,
+                                 model_init=None,
+                                 compute_metrics=None,
+                                 callbacks=[
+                                     LogStateCallBack(),
+                                     SearchValidCallBack(codebase_dataloader=codebase_dataloader,
+                                                         eval_dataloader=valid_dataloader,
+                                                         early_stop_patience=args.early_stop_patience)])
+        logger.info('Running configurations initialized successfully')
+
+        # --------------------------------------------------
+        # train
+        # --------------------------------------------------
         logger.info('-' * 100)
         logger.info('Start training')
         train_result = trainer.train()
@@ -217,7 +226,15 @@ def run_search(
     # --------------------------------------------------
     logger.info('-' * 100)
     logger.info('Start testing')
-    predict_metrics = model.evaluate_search(query_dataloader=trainer.get_train_dataloader(),
+    test_dataloader = DataLoader(dataset=datasets['test'],
+                                 batch_size=args.eval_batch_size,
+                                 collate_fn=lambda batch: collate_fn(batch,
+                                                                     args=args,
+                                                                     task=enums.TASK_SEARCH,
+                                                                     code_vocab=code_vocab,
+                                                                     nl_vocab=nl_vocab,
+                                                                     ast_vocab=ast_vocab))
+    predict_metrics = model.evaluate_search(query_dataloader=test_dataloader,
                                             codebase_dataloader=codebase_dataloader,
                                             metrics_prefix='test')
     ranks = predict_metrics.pop('test_ranks')
