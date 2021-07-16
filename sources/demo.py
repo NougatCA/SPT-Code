@@ -260,3 +260,12 @@
 # urls = model_inputs.pop('urls')
 # print(urls)
 # print(model_inputs)
+
+import torch
+import torch.nn.functional as f
+
+
+input1 = torch.rand(1, 128)
+input2 = torch.rand(1, 128)
+output = f.cosine_similarity(input1, input2)
+print(output.item())

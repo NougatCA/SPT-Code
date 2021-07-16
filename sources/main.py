@@ -18,7 +18,7 @@ def main(args):
     # model, vocabs = pre_train(args)
     # train(args, trained_model=model, trained_vocab=vocabs)
 
-    train(args, task=enums.TASK_SUMMARIZATION)
+    train(args, task=enums.TASK_SEARCH)
 
     # train(args,
     #       model_dir='../outputs/default_model_20210622_095911/models/',
