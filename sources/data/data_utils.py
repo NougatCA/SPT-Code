@@ -244,7 +244,8 @@ def load_pre_train_dataset(file, lang):
             - List of tokenized code strings with method names replaced
 
     """
-    if lang in [enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_GO, enums.LANG_JAVASCRIPT, enums.LANG_PHP, enums.LANG_RUBY]:
+    if lang in [enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_GO,
+                enums.LANG_JAVASCRIPT, enums.LANG_PHP, enums.LANG_RUBY]:
         sources, codes, names, codes_wo_name = parse_json_file(file, lang=lang)
         return sources, codes, names, codes_wo_name
 
@@ -303,7 +304,8 @@ def load_dataset_from_dir(dataset_dir):
                 asts = []
                 for source, code, name, code_wo_name in tqdm(zip(sources, codes, names, codes_wo_name),
                                                              desc='Parsing',
-                                                             leave=False):
+                                                             leave=False,
+                                                             total=len(sources)):
                     try:
                         ast, nl, nl_wo_name = generate_single_ast_nl(source=source,
                                                                      lang=lang,
@@ -491,7 +493,7 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
     new_nls = []
     names = []
     asts = []
-    for source, code, nl in tqdm(zip(sources, codes, nls), desc='Parsing', leave=False):
+    for source, code, nl in tqdm(zip(sources, codes, nls), desc='Parsing', leave=False, total=len(sources)):
         try:
             source = remove_comments_and_docstrings(source, lang=lang)
             ast, name = generate_single_ast_nl(source=source, lang=lang)
@@ -532,7 +534,7 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
     new_targets = []
     asts = []
     names = []
-    for source, target in tqdm(zip(sources, targets), desc='Parsing', leave=False):
+    for source, target in tqdm(zip(sources, targets), desc='Parsing', leave=False, total=len(sources)):
         try:
             source = remove_comments_and_docstrings(source, lang=source_lang)
             source = replace_string_literal(source)
