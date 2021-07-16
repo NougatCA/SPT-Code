@@ -47,8 +47,12 @@ class LogStateCallBack(TrainerCallback):
 
 class SearchValidCallBack(TrainerCallback):
 
-    def __init__(self, codebase_dataloader: torch.utils.data.dataloader.DataLoader, early_stop_patience):
+    def __init__(self,
+                 codebase_dataloader: torch.utils.data.dataloader.DataLoader,
+                 eval_dataloader: torch.utils.data.dataloader.DataLoader,
+                 early_stop_patience):
         self.codebase_dataloader = codebase_dataloader
+        self.eval_dataloader = eval_dataloader
         self.early_stopping = EarlyStopping(patience=early_stop_patience, higher_better=True)
 
     def on_epoch_end(self,
@@ -59,14 +63,14 @@ class SearchValidCallBack(TrainerCallback):
                      eval_dataloader: torch.utils.data.dataloader.DataLoader,
                      **kwargs):
         logger.info("***** Running evaluation *****")
-        logger.info("  Num queries = %d", len(eval_dataloader.dataset))
+        logger.info("  Num queries = %d", len(self.eval_dataloader.dataset))
         logger.info("  Num codes = %d", len(self.codebase_dataloader.dataset))
         logger.info("  Batch size = %d", args.eval_batch_size)
 
-        results = model.evaluate_search(query_dataloader=eval_dataloader,
+        results = model.evaluate_search(query_dataloader=self.eval_dataloader,
                                         codebase_dataloader=self.codebase_dataloader,
                                         metrics_prefix='valid')
-
+        logger.info(results)
         mrr = results['valid_mrr']
         self.early_stopping(score=mrr, model=None, epoch=state.epoch)
 
