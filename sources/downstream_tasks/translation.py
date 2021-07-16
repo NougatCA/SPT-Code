@@ -241,7 +241,7 @@ def run_translation(
     trainer.compute_metrics = compute_test_metrics
     predict_results = trainer.predict(test_dataset=datasets['test'],
                                       metric_key_prefix='test',
-                                      max_length=args.max_decode_step,
+                                      max_length=args.max_code_len,
                                       num_beams=args.beam_width)
     predict_metrics = predict_results.metrics
     references = predict_metrics.pop('test_references')

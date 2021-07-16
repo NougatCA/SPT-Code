@@ -244,17 +244,19 @@
 # print(vectors.shape)
 
 
-batch = [('a1', 'b1'),
-         ('a2', 'b2'),
-         ('a3', 'b3')]
-a, b = map(list, zip(*batch))
-print(a)
-print(b)
+# batch = [('a1', 'b1'),
+#          ('a2', 'b2'),
+#          ('a3', 'b3')]
 
-model_inputs = {'input_ids': a, 'attention_mask': b}
-model_inputs['urls'] = ['dfadf', 'dfadf']
+# a, b = map(list, zip(*batch))
 
-print(model_inputs)
-urls = model_inputs.pop('urls')
-print(urls)
-print(model_inputs)
+# print(a)
+# print(b)
+#
+# model_inputs = {'input_ids': a, 'attention_mask': b}
+# model_inputs['urls'] = ['dfadf', 'dfadf']
+#
+# print(model_inputs)
+# urls = model_inputs.pop('urls')
+# print(urls)
+# print(model_inputs)

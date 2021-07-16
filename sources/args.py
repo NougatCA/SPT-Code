@@ -30,25 +30,13 @@ class RuntimeArguments:
     )
 
     eval_batch_size: int = field(
-        default=128,
+        default=256,
         metadata={'help': 'Batch size for evaluation on each device'}
     )
 
     beam_width: int = field(
         default=5,
         metadata={'help': 'Beam width when using beam decoding, 1 to greedy decode'}
-    )
-
-    valid_metric: str = field(
-        default='bleu',
-        metadata={'help': 'The validation metric for evaluating the performance of the model on generation',
-                  'choices': ['loss', 'bleu']}
-    )
-
-    valid_metric_for_cls: str = field(
-        default='loss',
-        metadata={'help': 'The validation metric for evaluating the performance of the model on classification',
-                  'choices': ['loss']}
     )
 
     log_state_every: int = field(
@@ -70,26 +58,6 @@ class DatasetArguments:
     dataset_root: str = field(
         default='../../dataset/',
         metadata={'help': 'Root of the dataset'}
-    )
-
-    train_set_dir: str = field(
-        default='train',
-        metadata={'help': 'Directory name of the training set'}
-    )
-
-    valid_set_dir: str = field(
-        default='valid',
-        metadata={'help': 'Directory name of the validation set'}
-    )
-
-    test_set_dir: str = field(
-        default='test',
-        metadata={'help': 'Directory name of the testing set'}
-    )
-
-    pre_train_set_dir: str = field(
-        default='pre_train',
-        metadata={'help': 'Directory name of the pre-training set'}
     )
 
 
@@ -180,17 +148,6 @@ class PreprocessingArguments:
     max_nl_len: int = field(
         default=50,
         metadata={'help': 'Maximum length of the nl sequence'}
-    )
-
-    min_nl_len: int = field(
-        default=3,
-        metadata={'help': 'Minimum length of the nl sequence, '
-                          'sequence whose length lower than this value will be eliminated'}
-    )
-
-    max_decode_step: int = field(
-        default=max_nl_len.default,
-        metadata={'help': 'Maximum number of decoding steps'}
     )
 
     code_tokenize_method: str = field(
@@ -309,7 +266,7 @@ class TaskArguments:
     )
 
     search_language: str = field(
-        default='java',
+        default='ruby',
         metadata={'help': 'Language of the source code in code search, also the directory of the dataset dir'}
     )
 
