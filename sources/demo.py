@@ -261,11 +261,12 @@
 # print(urls)
 # print(model_inputs)
 
-import torch
-import torch.nn.functional as f
 
+tokens = [i for i in range(8)]
+print(tokens)
+mask_len = int(len(tokens) * 0.5)
+start = len(tokens) - mask_len
+print(tokens[start: start + mask_len])
 
-input1 = torch.rand(1, 128)
-input2 = torch.rand(1, 128)
-output = f.cosine_similarity(input1, input2)
-print(output.item())
+input_tokens = tokens[:start] + [-1] + tokens[start + mask_len:]
+print(input_tokens)
