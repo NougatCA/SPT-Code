@@ -262,11 +262,11 @@
 # print(model_inputs)
 
 
-tokens = [i for i in range(8)]
-print(tokens)
-mask_len = int(len(tokens) * 0.5)
-start = len(tokens) - mask_len
-print(tokens[start: start + mask_len])
-
-input_tokens = tokens[:start] + [-1] + tokens[start + mask_len:]
-print(input_tokens)
+# tokens = [i for i in range(8)]
+# print(tokens)
+# mask_len = int(len(tokens) * 0.5)
+# start = len(tokens) - mask_len
+# print(tokens[start: start + mask_len])
+#
+# input_tokens = tokens[:start] + [-1] + tokens[start + mask_len:]
+# print(input_tokens)
