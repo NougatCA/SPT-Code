@@ -15,10 +15,10 @@ import enums
 
 
 def main(args):
-    # model, vocabs = pre_train(args)
+    model, vocabs = pre_train(args, tasks=[enums.TASK_MASS])
     # train(args, trained_model=model, trained_vocab=vocabs)
 
-    train(args, task=enums.TASK_SEARCH)
+    # train(args, task=enums.TASK_CLONE_DETECTION)
 
     # train(args,
     #       model_dir='../outputs/default_model_20210622_095911/models/',
