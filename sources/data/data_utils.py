@@ -222,8 +222,11 @@ def iter_pre_train_dataset_files(lang_dir, lang):
         list[str]: List of paths of files
 
     """
+    # if lang in [enums.LANG_PYTHON]:
+    #     for file in iter_all_files(base=lang_dir):
+    #         if file.endswith('.jsonl'):
+    #             return [file]
     if lang in [enums.LANG_GO, enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_JAVASCRIPT, enums.LANG_PHP, enums.LANG_RUBY]:
-    # if lang in [vars.LANG_JAVASCRIPT]:
         return [file for file in iter_all_files(base=lang_dir) if file.endswith('.jsonl')]
     return []
 
