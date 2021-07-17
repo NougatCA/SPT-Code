@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 def pre_train(args, tasks=None):
     if tasks is None:
-        tasks = [enums.TASK_CODE_AST_PREDICTION, enums.TASK_NEXT_CODE_PREDICTION, enums.TASK_METHOD_NAME_PREDICTION]
+        tasks = [enums.TASK_CODE_AST_PREDICTION, enums.TASK_MASS, enums.TASK_METHOD_NAME_PREDICTION]
         # tasks = [vars.TASK_METHOD_NAME_PREDICTION]
 
     logger.info('*' * 100)
@@ -150,7 +150,7 @@ def pre_train(args, tasks=None):
             logger.info(f'Pre-training task {task} finished')
             trainer.save_model(os.path.join(args.model_root, task))
 
-        elif task == enums.TASK_NEXT_CODE_PREDICTION:
+        elif task == enums.TASK_MASS:
             # set model mode
             logger.info('-' * 100)
             model.set_model_mode(enums.MODE_GEN)
@@ -203,7 +203,7 @@ def pre_train(args, tasks=None):
             logger.info(f'Start pre-training task: {task}')
             # model device
             logger.info('Device: {}'.format(next(model.parameters()).device))
-            ncp_result = trainer.train()
+            mass_result = trainer.train()
             logger.info(f'Pre-training task {task} finished')
             trainer.save_model(os.path.join(args.model_root, task))
 

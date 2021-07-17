@@ -3,12 +3,12 @@ from torch.utils.data.dataset import Dataset
 import os
 import random
 import logging
-import re
 
 import enums
-from .data_utils import load_dataset_from_dir, tokenize_source, align_source_code, \
-    regular_tokenize, parse_for_summarization, parse_for_translation, parse_for_search, parse_for_clone
+from .data_utils import load_dataset_from_dir, \
+    parse_for_summarization, parse_for_translation, parse_for_search, parse_for_clone
 from eval.bleu.google_bleu import avg_bleu
+from data.vocab import Vocab
 
 logger = logging.getLogger(__name__)
 
@@ -128,37 +128,44 @@ class CodeDataset(Dataset):
                 while other_ast == self.asts[index]:
                     other_ast = self.asts[random.randint(0, self.size - 1)]
                 return self.codes[index], other_ast, self.names[index], 0
-        # ncp
-        elif self.task == enums.TASK_NEXT_CODE_PREDICTION:
+        # mass
+        elif self.task == enums.TASK_MASS:
 
-            source = self.sources[index]
-            code = self.codes[index]
-            lang = self.languages[index]
+            code_tokens = self.codes[index].split()
+            mask_len = int(self.args.mass_mask_ratio * len(code_tokens))
+            mask_start = random.randint(0, len(code_tokens) - mask_len)
+            mask_tokens = code_tokens[mask_start: mask_start + mask_len]
+            input_tokens = code_tokens[:mask_start] + [Vocab.MSK_TOKEN] + code_tokens[mask_start + mask_len:]
+            return ' '.join(input_tokens), self.asts[index], self.names[index], ' '.join(mask_tokens)
 
-            matches = re.finditer(r"\b\S", source)
-            indices = [m.start(0) for m in matches]
-            if len(indices) <= 2 * self.args.next_code_prediction_min_start_token:
-                indices = indices[len(indices) // 2:]
-            else:
-                indices = indices[self.args.next_code_prediction_min_start_token:]
-            while True:
-                index = random.sample(indices, 1)[0]
-                if index < self.args.max_code_len:
-                    break
-            former_source = source[:index]
-
-            try:
-                former_code, latter_code = align_source_code(former_source=former_source, code=code)
-            except Exception:
-                former_code = tokenize_source(former_source, lang=lang)
-                latter_code = regular_tokenize(source[index:])
-
-            latter_code_tokens = latter_code.split(' ')
-            if len(latter_code_tokens) > self.args.next_code_prediction_max_len:
-                latter_code_tokens = latter_code_tokens[:self.args.next_code_prediction_max_len]
-                latter_code = ' '.join(latter_code_tokens)
-
-            return former_code, self.asts[index], self.names[index], latter_code
+            # source = self.sources[index]
+            # code = self.codes[index]
+            # lang = self.languages[index]
+            #
+            # matches = re.finditer(r"\b\S", source)
+            # indices = [m.start(0) for m in matches]
+            # if len(indices) <= 2 * self.args.next_code_prediction_min_start_token:
+            #     indices = indices[len(indices) // 2:]
+            # else:
+            #     indices = indices[self.args.next_code_prediction_min_start_token:]
+            # while True:
+            #     index = random.sample(indices, 1)[0]
+            #     if index < self.args.max_code_len:
+            #         break
+            # former_source = source[:index]
+            #
+            # try:
+            #     former_code, latter_code = align_source_code(former_source=former_source, code=code)
+            # except Exception:
+            #     former_code = tokenize_source(former_source, lang=lang)
+            #     latter_code = regular_tokenize(source[index:])
+            #
+            # latter_code_tokens = latter_code.split(' ')
+            # if len(latter_code_tokens) > self.args.next_code_prediction_max_len:
+            #     latter_code_tokens = latter_code_tokens[:self.args.next_code_prediction_max_len]
+            #     latter_code = ' '.join(latter_code_tokens)
+            #
+            # return former_code, self.asts[index], self.names[index], latter_code
         # mnp
         elif self.task == enums.TASK_METHOD_NAME_PREDICTION:
             return self.codes_wo_name[index], self.asts[index], self.names_wo_name[index], self.names[index]

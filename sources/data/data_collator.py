@@ -42,8 +42,8 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             max_nl_len=args.max_nl_len
         )
         model_inputs['labels'] = torch.tensor(is_ast, dtype=torch.long)
-    # ncp
-    elif task == enums.TASK_NEXT_CODE_PREDICTION:
+    # mass
+    elif task == enums.TASK_MASS:
 
         code_raw, ast_raw, name_raw, target_raw = map(list, zip(*batch))
 
@@ -58,17 +58,16 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             nl_vocab=nl_vocab,
             max_nl_len=args.max_nl_len
         )
-
         model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
             batch=target_raw,
             vocab=code_vocab,
             processor=Vocab.sos_processor,
-            max_len=args.next_code_prediction_max_len
+            max_len=int(args.mass_mask_ratio * args.max_code_len)
         )
         model_inputs['labels'], _ = get_batch_inputs(batch=target_raw,
                                                      vocab=code_vocab,
                                                      processor=Vocab.eos_processor,
-                                                     max_len=args.next_code_prediction_max_len)
+                                                     max_len=int(args.mass_mask_ratio * args.max_code_len))
     # mnp
     elif task == enums.TASK_METHOD_NAME_PREDICTION:
 
