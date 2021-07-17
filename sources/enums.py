@@ -1,7 +1,8 @@
 
 # pre-training task names
 TASK_CODE_AST_PREDICTION = 'cap'
-TASK_NEXT_CODE_PREDICTION = 'ncp'
+# TASK_NEXT_CODE_PREDICTION = 'ncp'
+TASK_MASS = 'mass'
 TASK_METHOD_NAME_PREDICTION = 'mnp'
 
 # downstream task names
