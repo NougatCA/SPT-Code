@@ -238,14 +238,9 @@ class OptimizerArguments:
 class TaskArguments:
     """Arguments for specific tasks"""
 
-    next_code_prediction_min_start_token: int = field(
-        default=5,
-        metadata={'help': 'Min number of tokens of the former part of code'}
-    )
-
-    next_code_prediction_max_len: int = field(
-        default=10,
-        metadata={'help': 'Max number of tokens to predict for pre-training task: next code prediction'}
+    mass_mask_ratio: float = field(
+        default=0.5,
+        metadata={'help': 'Ratio between number of masked tokens and number of total tokens, in MASS'}
     )
 
     summarization_language: str = field(
