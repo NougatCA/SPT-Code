@@ -86,7 +86,7 @@ class SavingArguments:
     )
 
     dataset_save_dir: str = field(
-        default=os.path.join(DatasetArguments.dataset_root.default, 'saved'),
+        default=os.path.join(DatasetArguments.dataset_root, 'saved'),
         metadata={'help': 'Directory to save and load dataset pickle instance'}
     )
 
