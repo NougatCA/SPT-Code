@@ -97,42 +97,44 @@ def remove_comments_and_docstrings(source, lang):
 
     """
     if lang == enums.LANG_PYTHON:
-
-        io_obj = StringIO(source)
-        out = ""
-        prev_token_type = tokenize.INDENT
-        last_lineno = -1
-        last_col = 0
-        for tok in tokenize.generate_tokens(io_obj.readline):
-            token_type = tok[0]
-            token_string = tok[1]
-            start_line, start_col = tok[2]
-            end_line, end_col = tok[3]
-            # l_text = tok[4]
-            if start_line > last_lineno:
-                last_col = 0
-            if start_col > last_col:
-                out += (" " * (start_col - last_col))
-            # Remove comments:
-            if token_type == tokenize.COMMENT:
-                pass
-            # This series of conditionals removes docstrings:
-            elif token_type == tokenize.STRING:
-                if prev_token_type != tokenize.INDENT:
-                    # This is likely a docstring; double-check we're not inside an operator:
-                    if prev_token_type != tokenize.NEWLINE:
-                        if start_col > 0:
-                            out += token_string
-            else:
-                out += token_string
-            prev_token_type = token_type
-            last_col = end_col
-            last_lineno = end_line
-        temp = []
-        for x in out.split('\n'):
-            if x.strip() != "":
-                temp.append(x)
-        return '\n'.join(temp)
+        try:
+            io_obj = StringIO(source)
+            out = ""
+            prev_token_type = tokenize.INDENT
+            last_lineno = -1
+            last_col = 0
+            for tok in tokenize.generate_tokens(io_obj.readline):
+                token_type = tok[0]
+                token_string = tok[1]
+                start_line, start_col = tok[2]
+                end_line, end_col = tok[3]
+                # l_text = tok[4]
+                if start_line > last_lineno:
+                    last_col = 0
+                if start_col > last_col:
+                    out += (" " * (start_col - last_col))
+                # Remove comments:
+                if token_type == tokenize.COMMENT:
+                    pass
+                # This series of conditionals removes docstrings:
+                elif token_type == tokenize.STRING:
+                    if prev_token_type != tokenize.INDENT:
+                        # This is likely a docstring; double-check we're not inside an operator:
+                        if prev_token_type != tokenize.NEWLINE:
+                            if start_col > 0:
+                                out += token_string
+                else:
+                    out += token_string
+                prev_token_type = token_type
+                last_col = end_col
+                last_lineno = end_line
+            temp = []
+            for x in out.split('\n'):
+                if x.strip() != "":
+                    temp.append(x)
+            return '\n'.join(temp)
+        except Exception:
+            return source
     elif lang in [enums.LANG_RUBY]:
         return source
     else:
@@ -233,6 +235,8 @@ def iter_pre_train_dataset_files(lang_dir, lang):
     #     for file in iter_all_files(base=lang_dir):
     #         if file.endswith('.jsonl'):
     #             return [file]
+    # if lang in [enums.LANG_PYTHON]:
+    #     return [file for file in iter_all_files(base=lang_dir) if file.endswith('.jsonl')]
     if lang in [enums.LANG_GO, enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_JAVASCRIPT, enums.LANG_PHP,
                 enums.LANG_RUBY]:
         return [file for file in iter_all_files(base=lang_dir) if file.endswith('.jsonl')]
@@ -385,18 +389,22 @@ def tokenize_python(source):
     return ' '.join([token.string for token in tokens if token.string.strip() != ''])
 
 
-def tokenize_source(source, lang):
+def tokenize_source(source, lang, use_regular=False):
     """
     Tokenize the source code into tokens.
 
     Args:
         source (str): Source in string
         lang (str): Language of source code
+        use_regular (bool): Whether to use regular tokenize method, default to False
 
     Returns:
         str: Tokenized code, delimited by whitespace, string literal will be replaced by ``___STR``
 
     """
+    if use_regular:
+        code = replace_string_literal(regular_tokenize(source))
+        return trim_spaces(code)
     if lang == enums.LANG_PYTHON:
         tokens = tokenize.generate_tokens(StringIO(source).readline)
         code = ' '.join([token.string for token in tokens])
@@ -412,7 +420,6 @@ def tokenize_source(source, lang):
         tokens = MAPPING_LANG_LEXER[lang].get_pure_tokens(source)
         code = replace_string_literal(' '.join([token[0] for token in tokens]))
         return trim_spaces(code)
-
     else:
         # TODO: c# tokenize
         code = replace_string_literal(regular_tokenize(source))
@@ -564,8 +571,8 @@ def parse_for_translation(source_path, source_lang, target_path, target_lang):
             target = replace_string_literal(target)
 
             ast, name = generate_single_ast_nl(source=source, lang=source_lang)
-            code = tokenize_source(source=source, lang=source_lang)
-            tokenized_target = tokenize_source(source=target, lang=target_lang)
+            code = tokenize_source(source=source, lang=source_lang, use_regular=True)
+            tokenized_target = tokenize_source(source=target, lang=target_lang, use_regular=True)
 
             new_sources.append(code)
             asts.append(ast)
