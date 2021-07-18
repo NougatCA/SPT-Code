@@ -12,11 +12,12 @@ from args import add_args
 from train import train
 from pre_train import pre_train
 import enums
+from data.dataset import save_all_datasets
 
 
 def main(args):
     # model, vocabs = pre_train(args, tasks=[enums.TASK_MASS])
-    model, vocabs = pre_train(args)
+    # model, vocabs = pre_train(args)
     # train(args, trained_model=model, trained_vocab=vocabs)
 
     # train(args, task=enums.TASK_CLONE_DETECTION)
@@ -25,6 +26,9 @@ def main(args):
     #       model_dir='../outputs/default_model_20210622_095911/models/',
     #       vocab_dir='../outputs/default_model_20210622_095911/vocabs/',
     #       only_test=True)
+
+    # only init dataset and save
+    save_all_datasets(args)
 
 
 if __name__ == '__main__':
