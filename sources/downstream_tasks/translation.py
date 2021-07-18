@@ -47,7 +47,8 @@ def run_translation(
         datasets[split] = init_dataset(args=args,
                                        mode=enums.TRAINING_MODE_FINE_TUNE,
                                        task=enums.TASK_TRANSLATION,
-                                       language=args.summarization_language,
+                                       language=
+                                       f'{args.translation_source_language}-{args.translation_target_language}',
                                        split=split)
         logger.info(f'The size of {split} set: {len(datasets[split])}')
     logger.info('Datasets loaded successfully')
