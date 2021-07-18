@@ -46,7 +46,7 @@ class CodeDataset(Dataset):
         # load pre-training dataset
         if self.mode == 'pre_train':
             self.paths, self.languages, self.sources, self.codes, self.asts, self.names, self.codes_wo_name, \
-                self.names_wo_name, self.only_names = load_dataset_from_dir(dataset_dir=self.dataset_dir)
+                self.names_wo_name, self.only_names, self.docs = load_dataset_from_dir(dataset_dir=self.dataset_dir)
             self.size = len(self.codes)
         # load fine-tuning dataset
         else:
