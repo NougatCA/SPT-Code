@@ -1,4 +1,9 @@
 
+# training mode
+TRAINING_MODE_PRE_TRAIN = 'pre_train'
+TRAINING_MODE_FINE_TUNE = 'fine_tune'
+
+
 # pre-training task names
 TASK_CODE_AST_PREDICTION = 'cap'
 # TASK_NEXT_CODE_PREDICTION = 'ncp'
@@ -21,6 +26,6 @@ LANG_RUBY = 'ruby'
 LANG_C_SHARP = 'c_sharp'
 
 # BART model mode
-MODE_CLS = 'bart_cls'
-MODE_GEN = 'bart_gen'
-MODE_SEARCH = 'bart_search'
+MODEL_MODE_CLS = 'bart_cls'
+MODEL_MODE_GEN = 'bart_gen'
+MODEL_MODE_SEARCH = 'bart_search'
