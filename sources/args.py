@@ -85,6 +85,11 @@ class SavingArguments:
         metadata={'help': 'Root for saving checkpoints'}
     )
 
+    dataset_save_dir: str = field(
+        default=os.path.join(DatasetArguments.dataset_root.default, 'saved'),
+        metadata={'help': 'Directory to save and load dataset pickle instance'}
+    )
+
     model_root: str = field(
         default=os.path.join(output_root.default, 'models'),
         metadata={'help': 'Root for saving models'}
