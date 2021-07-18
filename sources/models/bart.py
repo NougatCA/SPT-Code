@@ -36,7 +36,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
         self.model._init_weights(self.classification_head.out_proj)
 
     def set_model_mode(self, mode):
-        assert mode in [enums.MODE_GEN, enums.MODE_CLS, enums.MODE_SEARCH]
+        assert mode in [enums.MODEL_MODE_GEN, enums.MODEL_MODE_CLS, enums.MODEL_MODE_SEARCH]
         self.mode = mode
         logging.info(f'BART mode switched to {mode}')
 
@@ -63,7 +63,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
     ):
         assert self.mode, 'It is required to specific a mode for BART before the model is passed through'
 
-        if self.mode == enums.MODE_SEARCH:
+        if self.mode == enums.MODEL_MODE_SEARCH:
             return self.forward_search(input_ids=input_ids,
                                        attention_mask=attention_mask,
                                        decoder_input_ids=decoder_input_ids,
@@ -83,7 +83,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                                        neg_nl_input_ids=neg_nl_input_ids,
                                        neg_nl_attention_mask=neg_nl_attention_mask)
 
-        elif self.mode == enums.MODE_GEN:
+        elif self.mode == enums.MODEL_MODE_GEN:
             return self.forward_gen(input_ids=input_ids,
                                     attention_mask=attention_mask,
                                     decoder_input_ids=decoder_input_ids,
@@ -101,7 +101,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                                     output_hidden_states=output_hidden_states,
                                     return_dict=return_dict)
 
-        elif self.mode == enums.MODE_CLS:
+        elif self.mode == enums.MODEL_MODE_CLS:
             return self.forward_cls(input_ids=input_ids,
                                     attention_mask=attention_mask,
                                     decoder_input_ids=decoder_input_ids,
@@ -418,7 +418,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                         codebase_dataloader: torch.utils.data.dataloader.DataLoader,
                         metrics_prefix: str):
 
-        self.set_model_mode(enums.MODE_CLS)
+        self.set_model_mode(enums.MODEL_MODE_CLS)
         self.eval()
 
         # embed query and codebase
@@ -474,7 +474,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                 scores.append(score)
 
         self.train()
-        self.set_model_mode(enums.MODE_SEARCH)
+        self.set_model_mode(enums.MODEL_MODE_SEARCH)
 
         results = {f'{metrics_prefix}_mrr': np.mean(scores),
                    f'{metrics_prefix}_ranks': ranks,
