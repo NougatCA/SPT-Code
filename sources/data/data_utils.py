@@ -163,17 +163,19 @@ def parse_json_file(file, lang):
         lang (str): Source code language
 
     Returns:
-        (list[str], list[str], list[str], list[str]):
+        (list[str], list[str], list[str], list[str], List[str]):
             - List of source codes
             - List of tokenized codes
             - List of split method names
             - List of tokenized codes with method name replaced with ``f``
+            - List of docstring strings, not every sample has it
 
     """
     sources = []
     codes = []
     names = []
     codes_wo_name = []
+    docs = []
     with open(file, encoding='utf-8') as f:
         for line in f.readlines():
             data = json.loads(line.strip())
@@ -192,7 +194,12 @@ def parse_json_file(file, lang):
             name = ' '.join(split_identifier(name))
             names.append(name)
 
-    return sources, codes, names, codes_wo_name
+            if 'docstring_tokens' in data:
+                docs.append(' '.join(data['docstring_tokens']))
+            elif 'docstring' in data:
+                docs.append(data['docstring'])
+
+    return sources, codes, names, codes_wo_name, docs
 
 
 def iter_all_files(base):
@@ -226,7 +233,8 @@ def iter_pre_train_dataset_files(lang_dir, lang):
     #     for file in iter_all_files(base=lang_dir):
     #         if file.endswith('.jsonl'):
     #             return [file]
-    if lang in [enums.LANG_GO, enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_JAVASCRIPT, enums.LANG_PHP, enums.LANG_RUBY]:
+    if lang in [enums.LANG_GO, enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_JAVASCRIPT, enums.LANG_PHP,
+                enums.LANG_RUBY]:
         return [file for file in iter_all_files(base=lang_dir) if file.endswith('.jsonl')]
     return []
 
@@ -240,17 +248,18 @@ def load_pre_train_dataset(file, lang):
         lang (str): Source code language
 
     Returns:
-        (list[str], list[str], list[str], list[str]):
+        (list[str], list[str], list[str], list[str], list[str]):
             - List of source code strings
             - List of tokenized code strings
             - List of nl strings
             - List of tokenized code strings with method names replaced
+            - List of doc strings, not every sample has it
 
     """
     if lang in [enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_GO,
                 enums.LANG_JAVASCRIPT, enums.LANG_PHP, enums.LANG_RUBY]:
-        sources, codes, names, codes_wo_name = parse_json_file(file, lang=lang)
-        return sources, codes, names, codes_wo_name
+        sources, codes, names, codes_wo_name, docs = parse_json_file(file, lang=lang)
+        return sources, codes, names, codes_wo_name, docs
 
 
 def load_dataset_from_dir(dataset_dir):
@@ -261,7 +270,8 @@ def load_dataset_from_dir(dataset_dir):
         dataset_dir (str): Root directory
 
     Returns:
-        (list[str], list[str], list[str], List[str], list[str], list[str], list[str], list[str]):
+        (dict, list[str], list[str], list[str], List[str], list[str], list[str], list[str], list[str], list[str]):
+            - Dict of paths: key is the dataset group, value is the path
             - List of str: languages for each line
             - List of str: source code
             - List of str: tokenized code string
@@ -269,10 +279,11 @@ def load_dataset_from_dir(dataset_dir):
             - List of str: split method name string
             - List of str:
             - List of str:
-            - List of str
+            - List of str:
+            - List of str: List of docs
 
     """
-
+    paths = {}
     languages = []
     all_sources = []
     all_asts = []
@@ -281,6 +292,7 @@ def load_dataset_from_dir(dataset_dir):
     all_names = []
     all_names_wo_name = []
     all_only_names = []
+    all_docs = []
     for file in os.listdir(dataset_dir):
 
         path = os.path.join(dataset_dir, file)
@@ -291,12 +303,12 @@ def load_dataset_from_dir(dataset_dir):
         dataset_files = iter_pre_train_dataset_files(path, lang=lang)
         if len(dataset_files) > 0:
             logger.info(f'  Language: {lang}')
+            paths[lang] = dataset_files
             n_sample = 0
             for dataset_file_path in dataset_files:
-
                 logger.info(f'    File: {dataset_file_path}')
-                sources, codes, names, codes_wo_name = load_pre_train_dataset(file=dataset_file_path,
-                                                                              lang=lang)
+                sources, codes, names, codes_wo_name, docs = load_pre_train_dataset(file=dataset_file_path,
+                                                                                    lang=lang)
 
                 new_sources = []
                 new_codes = []
@@ -331,6 +343,7 @@ def load_dataset_from_dir(dataset_dir):
                 all_names_wo_name += new_names_wo_name
                 all_only_names += only_names
                 all_asts += asts
+                all_docs += docs
 
                 n_line = len(new_sources)
                 languages += [lang for _ in range(n_line)]
@@ -340,7 +353,8 @@ def load_dataset_from_dir(dataset_dir):
 
     assert len(languages) == len(all_sources) == len(all_codes) == len(all_codes_wo_name) == len(all_asts) == \
            len(all_names) == len(all_names_wo_name) == len(all_only_names)
-    return languages, all_sources, all_codes, all_asts, all_names, all_codes_wo_name, all_names_wo_name, all_only_names
+    return paths, languages, all_sources, all_codes, all_asts, all_names, all_codes_wo_name, all_names_wo_name, \
+           all_only_names, all_docs
 
 
 def trim_spaces(string):
@@ -471,22 +485,27 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
         lang (str): Source code language
 
     Returns:
-        (list[str], list[str], list[str], list[str]):
+        (Dict, list[str], list[str], list[str], list[str]):
+            - Dict mapping dataset groups to paths
             - List of tokenized code strings
             - List of linearized AST strings
             - List of name and API sequence strings
             - List of comment strings
 
     """
+    paths = {'source': source_path}
     logger.info(f'    Source code file: {source_path}')
     sources = load_lines(source_path)
 
     if not os.path.isfile(code_path):
+        paths['code'] = source_path
         logger.info('    Tokenize source code')
         codes = [tokenize_source(source, lang=lang) for source in sources]
     else:
+        paths['code'] = code_path
         logger.info(f'    Tokenized code file: {code_path}')
         codes = load_lines(code_path)
+    paths['nl'] = nl_path
     logger.info(f'    Summarization file: {nl_path}')
     nls = load_lines(nl_path)
     # sources, codes, nls = sources[:1000], codes[:1000], nls[:1000]
@@ -507,7 +526,7 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
         except Exception:
             continue
 
-    return new_codes, asts, names, new_nls
+    return paths, new_codes, asts, names, new_nls
 
 
 def parse_for_translation(source_path, source_lang, target_path, target_lang):

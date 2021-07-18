@@ -15,7 +15,8 @@ import enums
 
 
 def main(args):
-    model, vocabs = pre_train(args, tasks=[enums.TASK_MASS])
+    # model, vocabs = pre_train(args, tasks=[enums.TASK_MASS])
+    model, vocabs = pre_train(args)
     # train(args, trained_model=model, trained_vocab=vocabs)
 
     # train(args, task=enums.TASK_CLONE_DETECTION)
