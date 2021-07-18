@@ -3,6 +3,7 @@ from torch.utils.data.dataset import Dataset
 import os
 import random
 import logging
+import pickle
 
 import enums
 from .data_utils import load_dataset_from_dir, \
@@ -15,16 +16,17 @@ logger = logging.getLogger(__name__)
 
 class CodeDataset(Dataset):
 
-    def __init__(self, args, mode, task=None, language=None, split=None, clone_mapping=None):
+    def __init__(self, args, dataset_name, mode, task=None, language=None, split=None, clone_mapping=None):
         """
         Initialization definition.
 
         Args:
             args (argparse.Namespace): Arguments
-            mode (str): Running mode, ``pre_train`` or ``fine_tune``
-            task (str): Dataset mode, support pre-training tasks: ['cap', 'ncp', 'mnp'],
+            dataset_name (str): Name of the dataset
+            mode (str): Training mode, ``pre_train`` or ``fine_tune``
+            task (str): Dataset mode, support pre-training tasks: ['cap', 'mass', 'mnp'],
                 and downstream fine-tuning task: ['summarization', 'translation'],
-                future support ['completion', 'search', 'clone', 'summarization', 'refinement']
+                future support ['completion', 'search', 'clone', 'summarization', 'translation']
             language (str): Only for downstream fine-tuning
             split (str): Only for downstream fine-tuning, support ['train', 'valid', 'test']
             clone_mapping (dict[int, str]): Mapping from code id to source code string, use only for clone detection
@@ -32,6 +34,7 @@ class CodeDataset(Dataset):
         """
         super(CodeDataset, self).__init__()
         self.args = args
+        self.dataset_name = dataset_name
         self.task = task
         self.mode = mode
         self.split = split
@@ -55,7 +58,7 @@ class CodeDataset(Dataset):
                 assert split in ['train', 'valid', 'test']
                 self.dataset_dir = os.path.join(self.dataset_dir, language, split)
 
-                self.source_path = os.path.join(self.dataset_dir, 'flat.code')
+                self.source_path = os.path.join(self.dataset_dir, 'source.code')
                 self.code_path = os.path.join(self.dataset_dir, 'token.code')
                 self.nl_path = os.path.join(self.dataset_dir, 'token.nl')
 
@@ -200,3 +203,52 @@ class CodeDataset(Dataset):
 
     def set_task(self, task):
         self.task = task
+
+    def save(self):
+        """Save to binary pickle file"""
+        path = os.path.join(self.args.dataset_save_dir, f'{self.dataset_name}.pk')
+        with open(path, mode='wb') as f:
+            pickle.dump(self, f)
+        logger.info(f'Dataset saved to {path}')
+
+
+def init_dataset(args, mode, task=None, language=None, split=None, clone_mapping=None,
+                 load_if_saved=True) -> CodeDataset:
+    """
+    Find dataset, if the dataset is saved, load and return, else initialize and return.
+
+    Args:
+        args (argparse.Namespace): Arguments
+        mode (str): Training mode, ``pre_train`` or ``fine_tune``
+        task (str): Dataset mode, support pre-training tasks: ['cap', 'mass', 'mnp'],
+            and downstream fine-tuning task: ['summarization', 'translation'],
+            future support ['completion', 'search', 'clone', 'summarization', 'translation']
+        language (str): Only for downstream fine-tuning
+        split (str): Only for downstream fine-tuning, support ['train', 'valid', 'test']
+        clone_mapping (dict[int, str]): Mapping from code id to source code string, use only for clone detection
+        load_if_saved (bool): Whether to load the saved instance if it exists, default to True
+
+    Returns:
+        CodeDataset: Loaded or initialized dataset
+
+    """
+    name = '.'.join([sub_name for sub_name in [mode, task, language, split] if sub_name is not None])
+    if load_if_saved:
+        path = os.path.join(args.dataset_save_dir, f'{name}.pk')
+        if os.path.exists(path) and os.path.isfile(path):
+            logger.info(f'Trying to load saved binary pickle file from: {path}')
+            with open(path, mode='rb') as f:
+                obj = pickle.load(f)
+            assert isinstance(obj, CodeDataset)
+            obj.args = args
+            logger.info(f'Dataset loaded from: {path}')
+            return obj
+    dataset = CodeDataset(args=args,
+                          dataset_name=name,
+                          mode=mode,
+                          task=task,
+                          language=language,
+                          split=split,
+                          clone_mapping=clone_mapping)
+    dataset.save()
+    return dataset
