@@ -61,7 +61,7 @@ class CodeDataset(Dataset):
 
                 self.source_path = os.path.join(self.dataset_dir, 'source.code')
                 self.code_path = os.path.join(self.dataset_dir, 'token.code')
-                self.nl_path = os.path.join(self.dataset_dir, 'token.nl')
+                self.nl_path = os.path.join(self.dataset_dir, 'token.docstring')
 
                 self.paths, self.codes, self.asts, self.names, self.nls = parse_for_summarization(
                     source_path=self.source_path,
@@ -73,15 +73,14 @@ class CodeDataset(Dataset):
             # code translation
             elif task == enums.TASK_TRANSLATION:
                 assert split in ['train', 'valid', 'test']
+                assert language in ['java-c_sharp', 'c_sharp-java']
+                source_lang, target_lang = language.split('-')
                 java_path = f'{split}.java-cs.txt.java'
                 c_sharp_path = f'{split}.java-cs.txt.cs'
-                if args.translation_source_language == args.translation_target_language:
-                    logger.warning(f'Source language and target language for code translation are '
-                                   f'both {args.translation_source_language}')
                 source_path = os.path.join(self.dataset_dir,
-                                           c_sharp_path if args.translation_source_language == 'c_sharp' else java_path)
+                                           c_sharp_path if source_lang == 'c_sharp' else java_path)
                 target_path = os.path.join(self.dataset_dir,
-                                           c_sharp_path if args.translation_target_language == 'c_sharp' else java_path)
+                                           c_sharp_path if target_lang == 'c_sharp' else java_path)
                 self.paths['source'] = source_path
                 self.paths['target'] = target_path
                 self.codes, self.asts, self.names, self.targets = parse_for_translation(
@@ -276,3 +275,56 @@ def print_paths(paths):
                 logger.info(f'  {key}: {v}')
         else:
             logger.info(f'  {key}: {value}')
+
+
+def save_all_datasets(args):
+    # logger.info('*' * 100)
+    # logger.info('Pre-training dataset')
+    # _ = init_dataset(args=args,
+    #                  mode=enums.TRAINING_MODE_PRE_TRAIN,
+    #                  load_if_saved=False)
+    # # summarization
+    # for lang in [enums.LANG_JAVA, enums.LANG_GO, enums.LANG_PHP, enums.LANG_PYTHON, enums.LANG_RUBY,
+    #              enums.LANG_JAVASCRIPT]:
+    #     for split in ['train', 'valid', 'test']:
+    #         logger.info('*' * 100)
+    #         logger.info(f'Summarization - {lang} - {split}')
+    #         _ = init_dataset(args=args,
+    #                          mode=enums.TRAINING_MODE_FINE_TUNE,
+    #                          task=enums.TASK_SUMMARIZATION,
+    #                          language=lang,
+    #                          split=split,
+    #                          load_if_saved=False)
+    # translation
+    for lang in ['java-c_sharp', 'c_sharp-java']:
+        for split in ['train', 'valid', 'test']:
+            logger.info('*' * 100)
+            logger.info(f'Translation - {lang} - {split}')
+            _ = init_dataset(args=args,
+                             mode=enums.TRAINING_MODE_FINE_TUNE,
+                             task=enums.TASK_TRANSLATION,
+                             language=lang,
+                             split=split,
+                             load_if_saved=False)
+    # # clone
+    # for split in ['train', 'valid', 'test']:
+    #     logger.info('*' * 100)
+    #     logger.info(f'Clone - {split}')
+    #     _ = init_dataset(args=args,
+    #                      mode=enums.TRAINING_MODE_FINE_TUNE,
+    #                      task=enums.TASK_CLONE_DETECTION,
+    #                      language=lang,
+    #                      split=split,
+    #                      load_if_saved=False)
+    # # search
+    # for lang in [enums.LANG_JAVA, enums.LANG_GO, enums.LANG_PHP, enums.LANG_PYTHON, enums.LANG_RUBY,
+    #              enums.LANG_JAVASCRIPT]:
+    #     for split in ['codebase', 'train', 'valid', 'test']:
+    #         logger.info('*' * 100)
+    #         logger.info(f'Search - {lang} - {split}')
+    #         _ = init_dataset(args=args,
+    #                          mode=enums.TRAINING_MODE_FINE_TUNE,
+    #                          task=enums.TASK_SEARCH,
+    #                          language=lang,
+    #                          split=split,
+    #                          load_if_saved=False)
