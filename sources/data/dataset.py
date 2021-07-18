@@ -28,7 +28,7 @@ class CodeDataset(Dataset):
                 and downstream fine-tuning task: ['summarization', 'translation'],
                 future support ['completion', 'search', 'clone', 'summarization', 'translation']
             language (str): Only for downstream fine-tuning
-            split (str): Only for downstream fine-tuning, support ['train', 'valid', 'test']
+            split (str): Only for downstream fine-tuning, support ['train', 'valid', 'test', 'codebase']
             clone_mapping (dict[int, str]): Mapping from code id to source code string, use only for clone detection
 
         """
@@ -38,13 +38,14 @@ class CodeDataset(Dataset):
         self.task = task
         self.mode = mode
         self.split = split
+        self.paths = {}
 
         # dataset dir for files, all files in this dir meeting the filename will be used as dataset files
         self.dataset_dir = os.path.join(args.dataset_root, self.mode)
 
         # load pre-training dataset
         if self.mode == 'pre_train':
-            self.languages, self.sources, self.codes, self.asts, self.names, self.codes_wo_name, \
+            self.paths, self.languages, self.sources, self.codes, self.asts, self.names, self.codes_wo_name, \
                 self.names_wo_name, self.only_names = load_dataset_from_dir(dataset_dir=self.dataset_dir)
             self.size = len(self.codes)
         # load fine-tuning dataset
@@ -62,10 +63,11 @@ class CodeDataset(Dataset):
                 self.code_path = os.path.join(self.dataset_dir, 'token.code')
                 self.nl_path = os.path.join(self.dataset_dir, 'token.nl')
 
-                self.codes, self.asts, self.names, self.nls = parse_for_summarization(source_path=self.source_path,
-                                                                                      code_path=self.code_path,
-                                                                                      nl_path=self.nl_path,
-                                                                                      lang=language)
+                self.paths, self.codes, self.asts, self.names, self.nls = parse_for_summarization(
+                    source_path=self.source_path,
+                    code_path=self.code_path,
+                    nl_path=self.nl_path,
+                    lang=language)
                 assert len(self.codes) == len(self.asts) == len(self.names) == len(self.nls)
                 self.size = len(self.codes)
             # code translation
@@ -80,6 +82,8 @@ class CodeDataset(Dataset):
                                            c_sharp_path if args.translation_source_language == 'c_sharp' else java_path)
                 target_path = os.path.join(self.dataset_dir,
                                            c_sharp_path if args.translation_target_language == 'c_sharp' else java_path)
+                self.paths['source'] = source_path
+                self.paths['target'] = target_path
                 self.codes, self.asts, self.names, self.targets = parse_for_translation(
                     source_path=source_path,
                     source_lang=args.translation_source_language,
@@ -93,6 +97,7 @@ class CodeDataset(Dataset):
                 assert language, '``Language`` must be specific if downstream task is code search'
                 assert split in ['codebase', 'train', 'valid', 'test']
                 self.dataset_dir = os.path.join(self.dataset_dir, language)
+                self.paths['file'] = os.path.join(self.dataset_dir, f'{split}.jsonl')
 
                 if split == 'codebase':
                     self.urls, self.codes, self.asts, self.names = parse_for_search(dataset_dir=self.dataset_dir,
@@ -112,10 +117,11 @@ class CodeDataset(Dataset):
             # code clone detection
             elif task == enums.TASK_CLONE_DETECTION:
                 assert split in ['train', 'valid', 'test']
+                path = os.path.join(self.dataset_dir, f'{split}.txt')
+                self.paths['file'] = path
                 self.codes_1, self.asts_1, self.names_1, \
-                    self.codes_2, self.asts_2, self.names_2, self.labels = parse_for_clone(
-                        path=os.path.join(self.dataset_dir, f'{split}.txt'),
-                        mapping=clone_mapping)
+                    self.codes_2, self.asts_2, self.names_2, self.labels = parse_for_clone(path=path,
+                                                                                           mapping=clone_mapping)
                 assert len(self.codes_1) == len(self.asts_1) == len(self.names_1) \
                        == len(self.codes_2) == len(self.asts_2) == len(self.names_2) == len(self.labels)
                 self.size = len(self.codes_1)
@@ -224,7 +230,7 @@ def init_dataset(args, mode, task=None, language=None, split=None, clone_mapping
             and downstream fine-tuning task: ['summarization', 'translation'],
             future support ['completion', 'search', 'clone', 'summarization', 'translation']
         language (str): Only for downstream fine-tuning
-        split (str): Only for downstream fine-tuning, support ['train', 'valid', 'test']
+        split (str): Only for downstream fine-tuning, support ['train', 'valid', 'test', 'codebase(only for search)']
         clone_mapping (dict[int, str]): Mapping from code id to source code string, use only for clone detection
         load_if_saved (bool): Whether to load the saved instance if it exists, default to True
 
@@ -241,7 +247,8 @@ def init_dataset(args, mode, task=None, language=None, split=None, clone_mapping
                 obj = pickle.load(f)
             assert isinstance(obj, CodeDataset)
             obj.args = args
-            logger.info(f'Dataset loaded from: {path}')
+            logger.info(f'Dataset instance loaded from: {path}')
+            print_paths(obj.paths)
             return obj
     dataset = CodeDataset(args=args,
                           dataset_name=name,
@@ -252,3 +259,20 @@ def init_dataset(args, mode, task=None, language=None, split=None, clone_mapping
                           clone_mapping=clone_mapping)
     dataset.save()
     return dataset
+
+
+def print_paths(paths):
+    """
+    Print paths.
+
+    Args:
+        paths (dict): Dict mapping path group to path string or list of path strings.
+
+    """
+    logger.info('Dataset loaded from these files:')
+    for key, value in paths.items():
+        if isinstance(value, list):
+            for v in value:
+                logger.info(f'  {key}: {v}')
+        else:
+            logger.info(f'  {key}: {value}')
