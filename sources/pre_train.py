@@ -4,7 +4,7 @@ import logging
 import os
 
 import enums
-from data.dataset import CodeDataset, init_dataset
+from data.dataset import init_dataset
 from data.vocab import Vocab
 from utils.general import count_params, human_format, layer_wise_parameters
 from utils.trainer import CodeTrainer, CodeCLSTrainer
@@ -124,6 +124,7 @@ def pre_train(args, tasks=None):
                                               load_best_model_at_end=True,
                                               ignore_data_skip=False,
                                               label_smoothing_factor=args.label_smoothing,
+                                              report_to=['tensorboard'],
                                               dataloader_pin_memory=True)
             trainer = CodeCLSTrainer(main_args=args,
                                      code_vocab=code_vocab,
@@ -179,6 +180,7 @@ def pre_train(args, tasks=None):
                                                      load_best_model_at_end=True,
                                                      ignore_data_skip=False,
                                                      label_smoothing_factor=args.label_smoothing,
+                                                     report_to=['tensorboard'],
                                                      dataloader_pin_memory=True)
             trainer = CodeTrainer(main_args=args,
                                   code_vocab=code_vocab,
@@ -236,6 +238,7 @@ def pre_train(args, tasks=None):
                                                      load_best_model_at_end=True,
                                                      ignore_data_skip=False,
                                                      label_smoothing_factor=args.label_smoothing,
+                                                     report_to=['tensorboard'],
                                                      dataloader_pin_memory=True)
             trainer = CodeTrainer(main_args=args,
                                   code_vocab=code_vocab,

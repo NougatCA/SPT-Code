@@ -8,7 +8,7 @@ import numpy as np
 
 from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab
-from data.dataset import CodeDataset, init_dataset
+from data.dataset import init_dataset
 from data.data_utils import load_clone_mapping
 from utils.general import count_params, human_format, layer_wise_parameters
 from eval.metrics import ir_metrics
@@ -194,6 +194,7 @@ def run_clone_detection(
                                       greater_is_better=True,
                                       ignore_data_skip=False,
                                       label_smoothing_factor=args.label_smoothing,
+                                      report_to=['tensorboard'],
                                       dataloader_pin_memory=True)
     trainer = CodeCLSTrainer(main_args=args,
                              code_vocab=code_vocab,

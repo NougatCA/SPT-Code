@@ -1,4 +1,4 @@
-from transformers import BartForConditionalGeneration, BartConfig, Seq2SeqTrainingArguments, EarlyStoppingCallback, \
+from transformers import BartConfig, Seq2SeqTrainingArguments, EarlyStoppingCallback, \
     IntervalStrategy, SchedulerType
 
 import logging
@@ -8,7 +8,7 @@ import os
 import enums
 from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab
-from data.dataset import CodeDataset, init_dataset
+from data.dataset import init_dataset
 from utils.general import count_params, human_format, layer_wise_parameters
 from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics, accuracy_for_sequence
 from utils.callbacks import LogStateCallBack
@@ -199,6 +199,7 @@ def run_translation(
                                              greater_is_better=True,
                                              ignore_data_skip=False,
                                              label_smoothing_factor=args.label_smoothing,
+                                             report_to=['tensorboard'],
                                              dataloader_pin_memory=True,
                                              predict_with_generate=True)
     trainer = CodeTrainer(main_args=args,

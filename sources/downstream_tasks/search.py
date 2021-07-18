@@ -8,7 +8,7 @@ import os
 import enums
 from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab
-from data.dataset import CodeDataset, init_dataset
+from data.dataset import init_dataset
 from utils.general import count_params, human_format, layer_wise_parameters
 from utils.callbacks import LogStateCallBack, SearchValidCallBack
 from utils.trainer import CodeCLSTrainer
@@ -187,6 +187,7 @@ def run_search(
                                           greater_is_better=None,
                                           ignore_data_skip=False,
                                           label_smoothing_factor=args.label_smoothing,
+                                          report_to=['tensorboard'],
                                           dataloader_pin_memory=True)
         trainer = CodeCLSTrainer(main_args=args,
                                  code_vocab=code_vocab,
