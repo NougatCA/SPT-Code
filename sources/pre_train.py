@@ -4,7 +4,7 @@ import logging
 import os
 
 import enums
-from data.dataset import CodeDataset
+from data.dataset import CodeDataset, init_dataset
 from data.vocab import Vocab
 from utils.general import count_params, human_format, layer_wise_parameters
 from utils.trainer import CodeTrainer, CodeCLSTrainer
@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 def pre_train(args, tasks=None):
     if tasks is None:
         tasks = [enums.TASK_CODE_AST_PREDICTION, enums.TASK_MASS, enums.TASK_METHOD_NAME_PREDICTION]
-        # tasks = [vars.TASK_METHOD_NAME_PREDICTION]
 
     logger.info('*' * 100)
     logger.info('Initializing pre-training environments')
@@ -27,7 +26,7 @@ def pre_train(args, tasks=None):
     # --------------------------------------------------
     logger.info('-' * 100)
     logger.info('Loading and parsing datasets')
-    dataset = CodeDataset(args, mode='pre_train')
+    dataset = init_dataset(args=args, mode=enums.TRAINING_MODE_PRE_TRAIN)
     logger.info(f'The size of pre_training set: {len(dataset)}')
     logger.info('Datasets loaded and parsed successfully')
 
@@ -98,7 +97,7 @@ def pre_train(args, tasks=None):
         if task == enums.TASK_CODE_AST_PREDICTION:
             # set model mode
             logger.info('-' * 100)
-            model.set_model_mode(enums.MODE_CLS)
+            model.set_model_mode(enums.MODEL_MODE_CLS)
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -153,7 +152,7 @@ def pre_train(args, tasks=None):
         elif task == enums.TASK_MASS:
             # set model mode
             logger.info('-' * 100)
-            model.set_model_mode(enums.MODE_GEN)
+            model.set_model_mode(enums.MODEL_MODE_GEN)
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------
@@ -210,7 +209,7 @@ def pre_train(args, tasks=None):
         elif task == enums.TASK_METHOD_NAME_PREDICTION:
             # set model mode
             logger.info('-' * 100)
-            model.set_model_mode(enums.MODE_GEN)
+            model.set_model_mode(enums.MODEL_MODE_GEN)
             # --------------------------------------------------
             # trainer
             # --------------------------------------------------

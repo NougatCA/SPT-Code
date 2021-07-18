@@ -7,7 +7,7 @@ import os
 
 from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab
-from data.dataset import CodeDataset
+from data.dataset import CodeDataset, init_dataset
 from utils.general import count_params, human_format, layer_wise_parameters
 from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics, accuracy_for_sequence
 from utils.callbacks import LogStateCallBack
@@ -44,11 +44,11 @@ def run_summarization(
     datasets = dict()
     splits = ['test'] if only_test else ['train', 'valid', 'test']
     for split in splits:
-        datasets[split] = CodeDataset(args=args,
-                                      mode='fine_tune',
-                                      task=enums.TASK_SUMMARIZATION,
-                                      language=args.summarization_language,
-                                      split=split)
+        datasets[split] = init_dataset(args=args,
+                                       mode=enums.TRAINING_MODE_FINE_TUNE,
+                                       task=enums.TASK_SUMMARIZATION,
+                                       language=args.summarization_language,
+                                       split=split)
         logger.info(f'The size of {split} set: {len(datasets[split])}')
     logger.info('Datasets loaded successfully')
 
@@ -129,7 +129,7 @@ def run_summarization(
                             num_beams=args.beam_width,
                             num_labels=2)
         model = BartForClassificationAndGeneration(config)
-    model.set_model_mode(enums.MODE_GEN)
+    model.set_model_mode(enums.MODEL_MODE_GEN)
     # log model statistics
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
     table = layer_wise_parameters(model)

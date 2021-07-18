@@ -8,7 +8,7 @@ import os
 import enums
 from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab
-from data.dataset import CodeDataset
+from data.dataset import CodeDataset, init_dataset
 from utils.general import count_params, human_format, layer_wise_parameters
 from utils.callbacks import LogStateCallBack, SearchValidCallBack
 from utils.trainer import CodeCLSTrainer
@@ -44,11 +44,11 @@ def run_search(
     datasets = dict()
     splits = ['codebase', 'test'] if only_test else ['codebase', 'train', 'valid', 'test']
     for split in splits:
-        datasets[split] = CodeDataset(args=args,
-                                      mode='fine_tune',
-                                      task=enums.TASK_SEARCH,
-                                      language=args.search_language,
-                                      split=split)
+        datasets[split] = init_dataset(args=args,
+                                       mode=enums.TRAINING_MODE_FINE_TUNE,
+                                       task=enums.TASK_SEARCH,
+                                       language=args.search_language,
+                                       split=split)
         logger.info(f'The size of {split} set: {len(datasets[split])}')
     codebase_dataloader = DataLoader(dataset=datasets['codebase'],
                                      batch_size=args.eval_batch_size,
@@ -136,8 +136,8 @@ def run_search(
                             min_length=1,
                             num_beams=args.beam_width,
                             num_labels=2)
-        model = BartForClassificationAndGeneration(config, mode=enums.MODE_SEARCH)
-    model.set_model_mode(enums.MODE_SEARCH)
+        model = BartForClassificationAndGeneration(config, mode=enums.MODEL_MODE_SEARCH)
+    model.set_model_mode(enums.MODEL_MODE_SEARCH)
     # log model statistic
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
     table = layer_wise_parameters(model)

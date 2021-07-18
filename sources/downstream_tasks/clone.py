@@ -8,7 +8,7 @@ import numpy as np
 
 from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab
-from data.dataset import CodeDataset
+from data.dataset import CodeDataset, init_dataset
 from data.data_utils import load_clone_mapping
 from utils.general import count_params, human_format, layer_wise_parameters
 from eval.metrics import ir_metrics
@@ -47,11 +47,11 @@ def run_clone_detection(
     datasets = dict()
     splits = ['test'] if only_test else ['train', 'valid', 'test']
     for split in splits:
-        datasets[split] = CodeDataset(args=args,
-                                      mode='fine_tune',
-                                      task=enums.TASK_CLONE_DETECTION,
-                                      split=split,
-                                      clone_mapping=code_mapping)
+        datasets[split] = init_dataset(args=args,
+                                       mode=enums.TRAINING_MODE_FINE_TUNE,
+                                       task=enums.TASK_CLONE_DETECTION,
+                                       split=split,
+                                       clone_mapping=code_mapping)
         logger.info(f'The size of {split} set: {len(datasets[split])}')
     logger.info('Datasets loaded successfully')
 
@@ -132,7 +132,7 @@ def run_clone_detection(
                             num_beams=args.beam_width,
                             num_labels=2)
         model = BartForClassificationAndGeneration(config)
-    model.set_model_mode(enums.MODE_CLS)
+    model.set_model_mode(enums.MODEL_MODE_CLS)
     # log model statistics
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
     table = layer_wise_parameters(model)
