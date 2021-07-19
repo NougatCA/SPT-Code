@@ -151,11 +151,11 @@ PATTERNS_METHOD_INVOCATION = {
 
 STATEMENT_ENDING_STRINGS = {
     enums.LANG_JAVA: 'statement',
-    enums.LANG_PYTHON: 'statement',
-    enums.LANG_GO: 'statement',
+    enums.LANG_PYTHON: ['statement', 'assignment'],
+    enums.LANG_GO: ['statement', 'declaration'],
     enums.LANG_JAVASCRIPT: 'statement',
     enums.LANG_RUBY: ['call', 'assignment', 'if', 'unless_modifier', 'operator_assignment', 'if_modifier', 'return',
-                     'rescue', 'else', 'unless', 'when', 'for', 'while_modifier', 'until'],
+                      'rescue', 'else', 'unless', 'when', 'for', 'while_modifier', 'until'],
     enums.LANG_PHP: 'statement'
 }
 
