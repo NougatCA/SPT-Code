@@ -39,6 +39,7 @@ def __ir_metrics(references, candidates):
             - precision
             - recall
             - f1
+
     """
     p, r, f1 = 0, 0, 0
     if len(references) == 0:
@@ -65,6 +66,7 @@ def avg_ir_metrics(references, candidates):
 
     Returns:
         dict: Dict of mapping ir metric names to scores
+
     """
     total_p, total_r, total_f1 = 0, 0, 0
     for reference, candidate in zip(references, candidates):
@@ -95,17 +97,18 @@ def remove_white_characters(tokens):
 
 def accuracy_for_sequence(references, candidates):
     """
-        Calculate accuracy,
-            this version of ir metrics calculate scores of each candidate in candidates
-            which match the corresponding reference exactly (except white characters).
+    Calculate accuracy,
+        this version of ir metrics calculate scores of each candidate in candidates
+        which match the corresponding reference exactly (except white characters).
 
-        Args:
-            references (list[list[str]]): A list of references, each reference should be a list of tokens
-            candidates (list[list[str]]): A list of candidates, each candidate should be a list of tokens
+    Args:
+        references (list[list[str]]): A list of references, each reference should be a list of tokens
+        candidates (list[list[str]]): A list of candidates, each candidate should be a list of tokens
 
-        Returns:
-            dict[str, float]: Dict of mapping ir metric names to scores
-        """
+    Returns:
+        dict[str, float]: Dict of mapping ir metric names to scores
+
+    """
     references = [remove_white_characters(reference) for reference in references]
     candidates = [remove_white_characters(candidate) for candidate in candidates]
     return accuracy(references=references, candidates=candidates)
@@ -113,9 +116,7 @@ def accuracy_for_sequence(references, candidates):
 
 def accuracy(references, candidates):
     """
-    Calculate accuracy,
-        this version of ir metrics calculate scores of each candidate in candidates
-        which match the corresponding reference exactly (except white characters).
+    Calculate accuracy.
 
     Args:
         references (list): A list of references, each reference should be an object
@@ -123,9 +124,55 @@ def accuracy(references, candidates):
 
     Returns:
         dict[str, float]: Dict of mapping ir metric names to scores
+
     """
     acc = accuracy_score(y_true=references, y_pred=candidates)
     return {'accuracy': acc}
+
+
+def accuracy_top_k_for_sequence(references, candidates):
+    """
+    Calculate accuracy,
+        this version of ir metrics calculate scores of each candidate in candidates
+        which match the corresponding reference exactly (except white characters).
+
+    Args:
+        references (list[list[str]]): A list of references, each reference should be a list of tokens
+        candidates (list[list[str]]): A list of candidates, each candidate should be a list of tokens
+
+    Returns:
+        dict[str, float]: Dict of mapping ir metric names to scores
+
+    """
+    references = [remove_white_characters(reference) for reference in references]
+    candidates = [remove_white_characters(candidate) for candidate in candidates]
+    return accuracy(references=references, candidates=candidates)
+
+
+def accuracy_top_k(references, candidates):
+    """
+    Calculate accuracy for top k.
+
+    Args:
+        references (list): A list of references, each reference should be an object
+        candidates (list[list]): A list of candidates, each candidate should be a list of k candidates
+
+    Returns:
+        dict[str, float]: Dict of mapping ir metric names to scores
+
+    """
+    k = len(candidates[0])
+    acc_top_k = {}
+    for i in range(1, k + 1):
+        acc_top_k[f'accuracy_top_{i}'] = 0
+    for reference, candidate_list in zip(references, candidates):
+        for i in range(1, k + 1):
+            candidate_set = set(candidate_list[:i])
+            if reference in candidate_set:
+                acc_top_k[f'accuracy_top_{i}'] += 1
+    for key, value in acc_top_k.items():
+        acc_top_k[key] = value / len(references)
+    return acc_top_k
 
 
 def bleu(references, candidates):
@@ -138,6 +185,7 @@ def bleu(references, candidates):
 
     Returns:
         dict[str, float]: Dict of mapping metric name and avg score
+
     """
     return {'bleu': avg_bleu(references=references, candidates=candidates)}
 
@@ -152,6 +200,7 @@ def meteor(references, candidates):
 
     Returns:
         dict[str, float]: Dict of mapping metric name and avg score
+
     """
     meteor_calculator = Meteor()
     return {'meteor': meteor_calculator.compute_score(references=references, candidates=candidates)[0]}
