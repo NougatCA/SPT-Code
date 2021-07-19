@@ -270,3 +270,24 @@
 #
 # input_tokens = tokens[:start] + [-1] + tokens[start + mask_len:]
 # print(input_tokens)
+
+
+# from data.data_utils import parse_for_completion
+#
+#
+# source_path = '../../dataset/fine_tune/completion/data.TargetType.seq.valid.source.txt'
+# target_path = '../../dataset/fine_tune/completion/data.TargetType.seq.valid.target.txt'
+# codes, asts, names, targets = parse_for_completion(source_path, target_path)
+#
+# for name, lines in zip(['code.txt', 'ast.txt', 'name.txt', 'target.txt'], [codes, asts, names, targets]):
+#     with open(f'../../dataset/fine_tune/completion/{name}', mode='w', encoding='utf-8') as f:
+#         for line in lines:
+#             f.write(line + '\n')
+
+
+from eval.metrics import accuracy_top_k
+
+references = ['a', 'b']
+candidates = [['b', 'a', 'c'],
+              ['c', 'a', 'b']]
+print(accuracy_top_k(references, candidates))

@@ -15,7 +15,7 @@ class RuntimeArguments:
     )
 
     n_epoch: int = field(
-        default=200,
+        default=5,
         metadata={'help': 'Number of data iterations for training'}
     )
 
@@ -146,7 +146,7 @@ class PreprocessingArguments:
     )
 
     max_ast_len: int = field(
-        default=50,
+        default=30,
         metadata={'help': 'Maximum length of ast sequence'}
     )
 
