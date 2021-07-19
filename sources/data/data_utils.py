@@ -10,7 +10,7 @@ import nltk
 
 from .asts.ast_parser import generate_single_ast_nl, split_identifier
 import enums
-
+from data.vocab import Vocab
 from data.antlr_parsers.go.GoLexer import GoLexer
 from data.antlr_parsers.java.Java8Lexer import Java8Lexer
 from data.antlr_parsers.python3.Python3Lexer import Python3Lexer
@@ -45,7 +45,7 @@ def load_lines(path):
 
     """
     with open(path, encoding='utf-8') as f:
-        lines = [line.strip() for line in f.readlines()]
+        lines = [line.strip() for line in f]
     return lines
 
 
@@ -196,10 +196,10 @@ def parse_json_file(file, lang):
             name = ' '.join(split_identifier(name))
             names.append(name)
 
-            if 'docstring_tokens' in data:
-                docs.append(' '.join(data['docstring_tokens']))
-            elif 'docstring' in data:
-                docs.append(data['docstring'])
+            if 'docstring' in data:
+                doc = clean_doc(data['docstring'])
+                if doc:
+                    docs.append(doc)
 
     return sources, codes, names, codes_wo_name, docs
 
@@ -481,6 +481,66 @@ def regular_tokenize(source: str):
     return ' '.join(nltk.word_tokenize(source))
 
 
+def clean_doc(s):
+    """
+    Clean docstring.
+
+    Args:
+        s (str): Raw docstring
+
+    Returns:
+        str: Cleaned docstring
+
+    """
+    # // Create an instance of  {@link RepresentationBaseType } and {@link RepresentationBaseType }.
+    # // Create an instance of RepresentationBaseType and RepresentationBaseType
+    # // Public setter for the  {@code rowMapper}.
+    # // Public setter for the rowMapper
+    # comment = comment.replaceAll("\\{@link|code(.*?)}", "$1");
+    # comment = comment.replaceAll("@see", "");
+
+    s = re.sub(r'{@link|code(.*?)}', r'\1', s)
+    s = re.sub(r'@see', '', s)
+
+    # // Implementation of the <a href="http://www.tarsnap.com/scrypt/scrypt.pdf"/>scrypt KDF</a>.
+    # // Implementation of the scrypt KDF
+    # comment = comment.replaceAll("<a.*?>(.*?)a>", "$1");
+    s = re.sub(r'<a.*?>(.*?)a>', r'\1', s)
+
+    # // remove all tags like <p>, </b>
+    # comment = comment.replaceAll("</?[A-Za-z0-9]+>", "");
+    s = re.sub(r'</?[A-Za-z0-9]+>', '', s)
+
+    # // Set the list of the watchable objects (meta data).
+    # // Set the list of the watchable objects
+    # comment = comment.replaceAll("\\(.*?\\)", "");
+    s = re.sub(r'\(.*?\)', '', s)
+
+    # // #dispatchMessage dispatchMessage
+    # // dispatchMessage
+    # comment = comment.replaceAll("#([\\w]+)\\s+\\1", "$1");
+    s = re.sub(r'#([\w]+)\s+\1', r'\1', s)
+
+    # // remove http url
+    # comment = comment.replaceAll("http\\S*", "");
+    s = re.sub(r'http\S*', '', s)
+
+    # // characters except english and number are ignored.
+    # comment = comment.replaceAll("[^a-zA-Z0-9_]", " ");
+    s = re.sub(r'[^a-zA-Z0-9_]', ' ', s)
+
+    # // delete empty symbols
+    # comment = comment.replaceAll("[ \f\n\r\t]", " ").trim();
+    # comment = comment.replaceAll(" +", " ");
+    s = re.sub(r'[ \f\n\r\t]', ' ', s).strip()
+    s = re.sub(r' +', ' ', s).strip()
+
+    if len(s) == 0 or len(s.split()) < 3:
+        return None
+    else:
+        return s
+
+
 def parse_for_summarization(source_path, code_path, nl_path, lang):
     """
     Load and parse dataset for code summarization.
@@ -611,6 +671,12 @@ def parse_for_search(dataset_dir, lang, split):
         logger.info(f'  File: {path}')
         for line in tqdm(f.readlines()):
             data = json.loads(line.strip())
+            if split in ['train', 'valid', 'test']:
+                if 'docstring' not in data:
+                    continue
+                nl = clean_doc(data['docstring'])
+                if nl is None:
+                    continue
             try:
                 if split in ['codebase', 'train']:
                     code = replace_string_literal(' '.join(data['code_tokens']))
@@ -626,7 +692,6 @@ def parse_for_search(dataset_dir, lang, split):
                     names.append(name)
 
                 if split in ['train', 'valid', 'test']:
-                    nl = ' '.join(data['docstring_tokens'])
                     nls.append(nl)
 
                 if split != 'train':
@@ -718,3 +783,68 @@ def parse_for_clone(path, mapping):
             except Exception:
                 continue
     return codes_1, asts_1, names_1, codes_2, asts_2, names_2, labels
+
+
+def parse_for_completion(source_path, target_path):
+    """
+    Load and parse for code completion.
+
+    Args:
+        source_path (str): Path of source
+        target_path (str): Path of target
+
+    Returns:
+        (list[str], list[str], list[str], list[str]):
+            - List of strings: source code
+            - List of strings: AST sequence
+            - List of strings: name sequence
+            - List of strings: target code
+
+    """
+    def restore_source(sub_source):
+        """
+        Transfer split source to source code, which can be parsed into AST.
+
+        Args:
+            sub_source (str): Split code
+
+        Returns:
+            str: Source code that can be parsed
+
+        """
+        tokens = sub_source.split()
+        is_subtoken = False
+        restored_source = ''
+        for token in tokens:
+            if token == '_':
+                is_subtoken = True
+                continue
+            if token == 'PRED':
+                token = Vocab.MSK_TOKEN
+            if is_subtoken:
+                restored_source += token.capitalize()
+            else:
+                restored_source += f' {token}'
+            is_subtoken = False
+        return restored_source.strip()
+
+    source_lines = load_lines(source_path)
+    target_lines = load_lines(target_path)
+    assert len(source_lines) == len(target_lines)
+
+    codes = []
+    asts = []
+    names = []
+    targets = []
+    for source, target in tqdm(zip(source_lines, target_lines), desc='Parsing', total=len(source_lines)):
+        try:
+            source = restore_source(source)
+            target = restore_source(target)
+            ast, name = generate_single_ast_nl(source=source, lang=enums.LANG_JAVA)
+            codes.append(source)
+            asts.append(ast)
+            names.append(name)
+            targets.append(target)
+        except Exception:
+            continue
+    return codes, asts, names, targets
