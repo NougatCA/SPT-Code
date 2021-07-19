@@ -7,7 +7,7 @@ import pickle
 
 import enums
 from .data_utils import load_dataset_from_dir, \
-    parse_for_summarization, parse_for_translation, parse_for_search, parse_for_clone
+    parse_for_summarization, parse_for_translation, parse_for_search, parse_for_clone, parse_for_completion
 from eval.bleu.google_bleu import avg_bleu
 from data.vocab import Vocab
 
@@ -124,6 +124,17 @@ class CodeDataset(Dataset):
                 assert len(self.codes_1) == len(self.asts_1) == len(self.names_1) \
                        == len(self.codes_2) == len(self.asts_2) == len(self.names_2) == len(self.labels)
                 self.size = len(self.codes_1)
+            # completion
+            elif task == enums.TASK_COMPLETION:
+                assert split in ['train', 'valid', 'test']
+                source_path = os.path.join(self.dataset_dir, f'data.TargetType.seq.{split}.source.txt')
+                target_path = os.path.join(self.dataset_dir, f'data.TargetType.seq.{split}.target.txt')
+                self.paths['source'] = source_path
+                self.paths['target'] = target_path
+                self.codes, self.asts, self.names, self.targets = parse_for_completion(source_path=source_path,
+                                                                                       target_path=target_path)
+                assert len(self.codes) == len(self.asts) == len(self.names) == len(self.targets)
+                self.size = len(self.codes)
 
     def __getitem__(self, index):
         # cap
@@ -202,6 +213,9 @@ class CodeDataset(Dataset):
         elif self.task == enums.TASK_CLONE_DETECTION:
             return self.codes_1[index], self.asts_1[index], self.names_1[index], \
                    self.codes_2[index], self.asts_2[index], self.names_2[index], self.labels[index]
+        # code completion
+        elif self.task == enums.TASK_COMPLETION:
+            return self.codes[index], self.asts[index], self.names[index], self.targets[index]
 
     def __len__(self):
         return self.size
