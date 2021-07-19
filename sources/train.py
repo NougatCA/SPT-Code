@@ -9,6 +9,7 @@ from downstream_tasks.summarization import run_summarization
 from downstream_tasks.translation import run_translation
 from downstream_tasks.search import run_search
 from downstream_tasks.clone import run_clone_detection
+from downstream_tasks.completion import run_completion
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,8 @@ def train(
         only_test (bool): True when only need to test, default to False
 
     """
-    assert task in [enums.TASK_SUMMARIZATION, enums.TASK_TRANSLATION, enums.TASK_SEARCH, enums.TASK_CLONE_DETECTION]
+    assert task in [enums.TASK_SUMMARIZATION, enums.TASK_TRANSLATION, enums.TASK_SEARCH, enums.TASK_CLONE_DETECTION,
+                    enums.TASK_COMPLETION]
     assert not only_test or isinstance(trained_model, str) or \
            isinstance(trained_model, BartForClassificationAndGeneration), \
            f'The model type is not supported, expect Bart model or string of path, got {type(trained_model)}'
@@ -69,3 +71,8 @@ def train(
                             trained_model=trained_model,
                             trained_vocab=trained_vocab,
                             only_test=only_test)
+    elif task == enums.TASK_COMPLETION:
+        run_completion(args=args,
+                       trained_model=trained_model,
+                       trained_vocab=trained_vocab,
+                       only_test=only_test)
