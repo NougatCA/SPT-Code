@@ -310,7 +310,6 @@ def load_dataset_from_dir(dataset_dir):
             paths[lang] = dataset_files
             n_sample = 0
             for dataset_file_path in dataset_files:
-                logger.info(f'    File: {dataset_file_path}')
                 sources, codes, names, codes_wo_name, docs = load_pre_train_dataset(file=dataset_file_path,
                                                                                     lang=lang)
 
@@ -322,7 +321,7 @@ def load_dataset_from_dir(dataset_dir):
                 only_names = []
                 asts = []
                 for source, code, name, code_wo_name in tqdm(zip(sources, codes, names, codes_wo_name),
-                                                             desc='Parsing',
+                                                             desc=f'Parsing {os.path.basename(dataset_file_path)}',
                                                              leave=False,
                                                              total=len(sources)):
                     try:
@@ -352,6 +351,8 @@ def load_dataset_from_dir(dataset_dir):
                 n_line = len(new_sources)
                 languages += [lang for _ in range(n_line)]
                 n_sample += n_line
+
+                logger.info(f'    File: {dataset_file_path}, {n_line} samples')
 
             logger.info(f'  {lang} dataset size: {n_sample}')
 
