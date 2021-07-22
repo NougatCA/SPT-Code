@@ -15,12 +15,12 @@ class RuntimeArguments:
     )
 
     n_epoch: int = field(
-        default=5,
+        default=200,
         metadata={'help': 'Number of data iterations for training'}
     )
 
     pre_train_n_epoch: int = field(
-        default=1,
+        default=10,
         metadata={'help': 'Number of data iterations for pre-training on each task'}
     )
 
