@@ -150,7 +150,7 @@ PATTERNS_METHOD_INVOCATION = {
 }
 
 STATEMENT_ENDING_STRINGS = {
-    enums.LANG_JAVA: 'statement',
+    enums.LANG_JAVA: ['statement', 'expression'],
     enums.LANG_PYTHON: ['statement', 'assignment'],
     enums.LANG_GO: ['statement', 'declaration'],
     enums.LANG_JAVASCRIPT: 'statement',
@@ -206,7 +206,8 @@ def parse_ast(source, lang):
     parser.set_language(LANGUAGE[lang])
     if lang == enums.LANG_PHP:
         source = PHP_SOURCE_PREFIX + source + PHP_SOURCE_POSTFIX
-    tree = parser.parse(str.encode(source))
+    tree = parser.parse(source.encode('utf-8').decode('unicode_escape').encode())
+    # tree = parser.parse(str.encode(source))
     return tree
 
 
