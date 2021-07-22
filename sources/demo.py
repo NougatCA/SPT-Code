@@ -158,19 +158,32 @@
 #
 #
 
-# import json
-# import random
-# import re
-#
-#
-# def lang_sample(lang):
-#     with open(f'../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
-#         line = f.readlines()[random.randint(0, 1000)]
-#         data = json.loads(line.strip())
-#         name = data['func_name']
-#         source = data['code']
-#         code = ' '.join(data['code_tokens'])
-#     return source, code, name
+import json
+import random
+import re
+from data.asts.ast_parser import generate_single_ast_nl
+
+
+def lang_sample(lang):
+    with open(f'../../dataset/fine_tune/summarization/{lang}/valid/source.code') as f:
+        line = f.readlines()[random.randint(0, 1000)]
+        # data = json.loads(line.strip())
+        # name = data['func_name']
+        # source = data['code']
+        # code = ' '.join(data['code_tokens'])
+    # return source, code, name
+    # return source
+    return line
+
+
+lang = 'java'
+
+source = lang_sample(lang)
+source = source.encode('utf-8').decode('unicode_escape')
+ast, nl = generate_single_ast_nl(source=source, lang=lang)
+print(ast)
+
+
 # #
 # #
 # # def sample_separation_position(source):
@@ -285,9 +298,9 @@
 #             f.write(line + '\n')
 
 
-from eval.metrics import accuracy_top_k
-
-references = ['a', 'b']
-candidates = [['b', 'a', 'c'],
-              ['c', 'a', 'b']]
-print(accuracy_top_k(references, candidates))
+# from eval.metrics import accuracy_top_k
+#
+# references = ['a', 'b']
+# candidates = [['b', 'a', 'c'],
+#               ['c', 'a', 'b']]
+# print(accuracy_top_k(references, candidates))
