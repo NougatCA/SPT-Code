@@ -1,4 +1,3 @@
-
 from tokenizers import Tokenizer
 from tokenizers.models import BPE, WordLevel
 from tokenizers.trainers import BpeTrainer, WordLevelTrainer
@@ -13,19 +12,17 @@ import logging
 
 from typing import List, Union
 
-
 logger = logging.getLogger(__name__)
 
 
 class Vocab(object):
-
     # special vocabulary symbols
-    PAD_TOKEN = '[PAD]'     # padding token
-    SOS_TOKEN = '[SOS]'     # start of sequence, also CLS
-    EOS_TOKEN = '[EOS]'     # end of sequence
-    UNK_TOKEN = '[UNK]'     # unknown token
-    MSK_TOKEN = '[MSK]'     # mask token
-    SEP_TOKEN = '[SEP]'     # sentence separator token
+    PAD_TOKEN = '[PAD]'  # padding token
+    SOS_TOKEN = '[SOS]'  # start of sequence, also CLS
+    EOS_TOKEN = '[EOS]'  # end of sequence
+    UNK_TOKEN = '[UNK]'  # unknown token
+    MSK_TOKEN = '[MSK]'  # mask token
+    SEP_TOKEN = '[SEP]'  # sentence separator token
     # CLS_TOKEN = '[CLS]'     # classification placeholder
 
     # default special symbols, if need additional symbols, use init parameter 'additional_special_symbols'
@@ -66,7 +63,7 @@ class Vocab(object):
             datasets (Union[List[str], List[List[str]]]): List of (file paths/list of string) to train the tokenizer
             additional_special_symbols (list[str]): Optional, list of custom special symbols
             ignore_case (bool): Ignore cases if True, default False
-            save_root (str): Optional, if given, save to the given root
+            save_root (str): Optional, if given, save to given root
             index_offset (int): Optional, the index offset when encoding and decoding.
 
         """
@@ -330,6 +327,12 @@ class Vocab(object):
     def num_special_token(self):
         return len(self.__special_symbols)
 
+    def save_pickle(self, path):
+        """Save to binary pickle file"""
+        with open(path, mode='wb') as f:
+            pickle.dump(self, f)
+        logger.info(f'Vocab saved to {path}')
+
     def __len__(self):
         return self.tokenizer.get_vocab_size()
 
@@ -365,3 +368,34 @@ def load_vocab(vocab_root, name) -> Vocab:
         obj = pickle.load(f)
     assert isinstance(obj, Vocab)
     return obj
+
+
+def init_vocab(args,
+               name,
+               method='word',
+               vocab_size=None,
+               datasets: Union[List[str], List[List[str]]] = None,
+               additional_special_symbols=None,
+               ignore_case=False,
+               save_root=None,
+               index_offset=None,
+               load_if_saved=True) -> Vocab:
+    vocab_name = '.'.join(
+        [sub_name for sub_name in [name, method, str(vocab_size), index_offset] if sub_name is not None])
+    path = os.path.join(args.vocab_save_dir, f'{vocab_name}.pk')
+    if load_if_saved:
+        if os.path.exists(path) and os.path.isfile(path):
+            logger.info(f'Trying to load saved binary pickle file from: {path}')
+            with open(path, mode='rb') as f:
+                obj = pickle.load(f)
+            assert isinstance(obj, Vocab)
+            return obj
+    vocab = Vocab(name=name,
+                  method=method,
+                  vocab_size=vocab_size,
+                  datasets=datasets,
+                  additional_special_symbols=additional_special_symbols,
+                  ignore_case=ignore_case,
+                  save_root=save_root,
+                  index_offset=index_offset)
+    vocab.save_pickle(path)
