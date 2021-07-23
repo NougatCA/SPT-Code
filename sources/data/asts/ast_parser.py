@@ -14,18 +14,64 @@ LANGUAGE = {enums.LANG_GO: Language('data/asts/build/my-languages.so', 'go'),
             enums.LANG_RUBY: Language('data/asts/build/my-languages.so', 'ruby'),
             enums.LANG_C_SHARP: Language('data/asts/build/my-languages.so', 'c_sharp')}
 
+# LANGUAGE = {enums.LANG_GO: Language('build/my-languages.so', 'go'),
+#             enums.LANG_JAVASCRIPT: Language('build/my-languages.so', 'javascript'),
+#             enums.LANG_PYTHON: Language('build/my-languages.so', 'python'),
+#             enums.LANG_JAVA: Language('build/my-languages.so', 'java'),
+#             enums.LANG_PHP: Language('build/my-languages.so', 'php'),
+#             enums.LANG_RUBY: Language('build/my-languages.so', 'ruby'),
+#             enums.LANG_C_SHARP: Language('build/my-languages.so', 'c_sharp')}
+
 parser = Parser()
 
-PHP_SOURCE_PREFIX = '<?php '
-PHP_SOURCE_POSTFIX = ' ?>'
+SOURCE_PREFIX_POSTFIX = {
+    enums.LANG_PHP: ['<?php ', ' ?>'],
+    enums.LANG_JAVA: ['class A{ ', ' }']
+}
+
+PATTERNS_METHOD_ROOT = {
+    enums.LANG_JAVA: """
+    (program
+        (class_declaration
+            body: (class_body
+                (method_declaration) @method_root)
+        )
+    )
+    """
+}
+
+PATTERNS_METHOD_BODY = {
+    enums.LANG_JAVA: """
+    (method_declaration
+        body: (block) @body
+    )
+    """,
+
+    enums.LANG_JAVASCRIPT: """
+    (program
+        (function_declaration
+            body: (statement_block) @body
+        )
+    )
+    """,
+
+    enums.LANG_GO: """
+    (source_file
+        [
+        (function_declaration
+            body: (block) @body)
+
+        (method_declaration
+            body: (block) @body)
+        ]
+    )
+    """
+}
 
 PATTERNS_METHOD_NAME = {
     enums.LANG_JAVA: """
-    (program
-        (local_variable_declaration
-            declarator: (variable_declarator
-                name: (identifier) @method_name)
-        )
+    (method_declaration
+        name: (identifier) @method_name
     )
     """,
 
@@ -150,17 +196,17 @@ PATTERNS_METHOD_INVOCATION = {
 }
 
 STATEMENT_ENDING_STRINGS = {
-    enums.LANG_JAVA: ['statement', 'expression'],
+    enums.LANG_JAVA: ['statement', 'expression', 'declaration'],
     enums.LANG_PYTHON: ['statement', 'assignment'],
-    enums.LANG_GO: ['statement', 'declaration'],
-    enums.LANG_JAVASCRIPT: 'statement',
+    enums.LANG_GO: ['statement', 'declaration', 'expression'],
+    enums.LANG_JAVASCRIPT: ['statement', 'expression'],
     enums.LANG_RUBY: ['call', 'assignment', 'if', 'unless_modifier', 'operator_assignment', 'if_modifier', 'return',
                       'rescue', 'else', 'unless', 'when', 'for', 'while_modifier', 'until'],
-    enums.LANG_PHP: 'statement'
+    enums.LANG_PHP: ['statement', 'expression']
 }
 
 
-ELIMINATE_AST_NODE = ['(', ')', '{', '}', ';']
+# ELIMINATE_AST_NODE = ['(', ')', '{', '}', ';']
 
 
 def camel_split(identifier):
@@ -200,15 +246,20 @@ def parse_ast(source, lang):
         lang (str): Set the language
 
     Returns:
-        tree_sitter.Tree: parsed ast tree, not root node, get root by ``tree.root_node''
+        tree_sitter.Node: Method/Function root node
 
     """
     parser.set_language(LANGUAGE[lang])
-    if lang == enums.LANG_PHP:
-        source = PHP_SOURCE_PREFIX + source + PHP_SOURCE_POSTFIX
+    if lang in SOURCE_PREFIX_POSTFIX:
+        source = SOURCE_PREFIX_POSTFIX[lang][0] + source + SOURCE_PREFIX_POSTFIX[lang][1]
     tree = parser.parse(source.encode('utf-8').decode('unicode_escape').encode())
+    root = tree.root_node
     # tree = parser.parse(str.encode(source))
-    return tree
+    if lang in PATTERNS_METHOD_ROOT:
+        query = LANGUAGE[lang].query(PATTERNS_METHOD_ROOT[lang])
+        captures = query.captures(root)
+        root = captures[0][0]
+    return root
 
 
 def get_node_name(source, node, lang):
@@ -225,8 +276,9 @@ def get_node_name(source, node, lang):
 
     """
     if node.is_named:
-        if lang == enums.LANG_PHP:
-            return source[node.start_byte - len(PHP_SOURCE_PREFIX): node.end_byte - len(PHP_SOURCE_PREFIX)]
+        if lang in SOURCE_PREFIX_POSTFIX:
+            return source[node.start_byte - len(SOURCE_PREFIX_POSTFIX[lang][0]):
+                          node.end_byte - len(SOURCE_PREFIX_POSTFIX[lang][0])]
         else:
             return source[node.start_byte: node.end_byte]
     return ''
@@ -281,13 +333,11 @@ def is_statement_node(node, lang):
         bool: True if given node is a statement node
 
     """
-    ending = STATEMENT_ENDING_STRINGS[lang]
-    if isinstance(ending, str):
-        return node.type.endswith(ending)
+    endings = STATEMENT_ENDING_STRINGS[lang]
+    end = node.type.split('_')[-1]
+    if end in endings:
+        return True
     else:
-        for end in ending:
-            if node.type.endswith(end):
-                return True
         return False
 
 
@@ -349,6 +399,10 @@ def generate_statement_xsbt(node, lang):
         str: X-SBT string
 
     """
+    if lang in PATTERNS_METHOD_BODY:
+        query = LANGUAGE[lang].query(PATTERNS_METHOD_BODY[lang])
+        captures = query.captures(node)
+        node = captures[0][0]
     tokens = __statement_xsbt(node=node, lang=lang)
     return ' '.join(tokens)
 
@@ -424,17 +478,17 @@ def generate_single_ast_nl(source, lang, name=None, replace_method_name=False):
             - Nl sequence in string
 
     """
-    tree = parse_ast(source=source, lang=lang)
-    ast = generate_statement_xsbt(node=tree.root_node, lang=lang)
+    root = parse_ast(source=source, lang=lang)
+    ast = generate_statement_xsbt(node=root, lang=lang)
     if replace_method_name:
         nl, nl_wo_name = extract_nl_from_code(source=source,
-                                              root=tree.root_node,
+                                              root=root,
                                               lang=lang,
                                               name=name,
                                               replace_method_name=replace_method_name)
         return ast, nl, nl_wo_name
     else:
-        nl = extract_nl_from_code(source=source, root=tree.root_node, lang=lang, name=name)
+        nl = extract_nl_from_code(source=source, root=root, lang=lang, name=name)
         return ast, nl
 
 
@@ -505,35 +559,32 @@ def generate_asts_nls(sources, langs):
 
 
 # def lang_sample(lang):
+#     import random, json
 #     with open(f'../../../../dataset/pre_train/{lang}/valid/{lang}_valid_0.jsonl') as f:
 #         line = f.readlines()[random.randint(0, 1000)]
 #         data = json.loads(line.strip())
 #         name = data['func_name']
 #         source = data['code']
-#         code = ' '.join(data['code_tokens'])
-#     return source, code, name
+#     return source, name
 #
 #
-# lang = 'php'
+# lang = 'java'
 #
-# source, code, name = lang_sample(lang)
+# source, name = lang_sample(lang)
 # print('-' * 100)
 # print('source:')
 # print(source)
-# print('-' * 100)
-# print('code')
-# print(code)
 # print('-' * 100)
 # print('name in json:')
 # print(name)
 # print('-' * 100)
 #
-# tree = parse_ast(source, lang=lang)
+# root = parse_ast(source, lang=lang)
 # print('name extracted:')
-# print(get_method_name(source=source, root=tree.root_node, lang=lang))
+# print(get_method_name(source=source, root=root, lang=lang))
 # print('-' * 100)
 # print('api sequence:')
-# print(extract_method_invocation(source, tree.root_node, lang))
+# print(extract_method_invocation(source, root, lang))
 # print('-' * 100)
 # print('xsbt in statements:')
-# print(' '.join(generate_statement_xsbt(tree.root_node, lang)))
+# print(generate_statement_xsbt(root, lang))
