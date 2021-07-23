@@ -20,7 +20,7 @@ class RuntimeArguments:
     )
 
     pre_train_n_epoch: int = field(
-        default=10,
+        default=5,
         metadata={'help': 'Number of data iterations for pre-training on each task'}
     )
 
@@ -86,8 +86,13 @@ class SavingArguments:
     )
 
     dataset_save_dir: str = field(
-        default=os.path.join(DatasetArguments.dataset_root, 'saved'),
+        default=os.path.join(DatasetArguments.dataset_root, 'dataset_saved'),
         metadata={'help': 'Directory to save and load dataset pickle instance'}
+    )
+
+    vocab_save_dir: str = field(
+        default=os.path.join(DatasetArguments.dataset_root, 'vocab_saved'),
+        metadata={'help': 'Directory to save and load vocab pickle instance'}
     )
 
     model_root: str = field(
@@ -156,13 +161,13 @@ class PreprocessingArguments:
     )
 
     code_tokenize_method: str = field(
-        default='word',
+        default='bpe',
         metadata={'help': 'Tokenize method of code',
                   'choices': ['word', 'bpe']}
     )
 
     nl_tokenize_method: str = field(
-        default='word',
+        default='bpe',
         metadata={'help': 'Tokenize method of nl',
                   'choices': ['word', 'bpe']}
     )
@@ -209,7 +214,7 @@ class OptimizerArguments:
     """Arguments for optimizer, early stopping, warmup, grad clipping, label smoothing."""
 
     learning_rate: float = field(
-        default=3e-4,
+        default=5e-5,
         metadata={'help': 'Learning rate'}
     )
 
