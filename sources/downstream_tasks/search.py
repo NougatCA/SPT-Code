@@ -7,7 +7,7 @@ import os
 
 import enums
 from models.bart import BartForClassificationAndGeneration
-from data.vocab import Vocab, load_vocab
+from data.vocab import Vocab, load_vocab, init_vocab
 from data.dataset import init_dataset
 from utils.general import count_params, human_format, layer_wise_parameters
 from utils.callbacks import LogStateCallBack, SearchValidCallBack
@@ -76,24 +76,24 @@ def run_search(
             nl_vocab = load_vocab(vocab_root=trained_vocab, name=args.nl_vocab_name)
     else:
         logger.info('Building vocabularies')
-        code_vocab = Vocab(name=args.code_vocab_name,
-                           method=args.code_tokenize_method,
-                           vocab_size=args.code_vocab_size,
-                           datasets=[datasets['train'].codes],
-                           ignore_case=True,
-                           save_root=args.vocab_root)
-        nl_vocab = Vocab(name=args.nl_vocab_name,
-                         method=args.nl_tokenize_method,
-                         vocab_size=args.nl_vocab_size,
-                         datasets=[datasets['train'].nls],
-                         ignore_case=True,
-                         save_root=args.vocab_root,
-                         index_offset=len(code_vocab))
-        ast_vocab = Vocab(name=args.ast_vocab_name,
-                          method='word',
-                          datasets=[datasets['train'].asts],
-                          save_root=args.vocab_root,
-                          index_offset=len(code_vocab) + len(nl_vocab))
+        code_vocab = init_vocab(name=args.code_vocab_name,
+                                method=args.code_tokenize_method,
+                                vocab_size=args.code_vocab_size,
+                                datasets=[datasets['train'].codes],
+                                ignore_case=True,
+                                save_root=args.vocab_root)
+        nl_vocab = init_vocab(name=args.nl_vocab_name,
+                              method=args.nl_tokenize_method,
+                              vocab_size=args.nl_vocab_size,
+                              datasets=[datasets['train'].nls],
+                              ignore_case=True,
+                              save_root=args.vocab_root,
+                              index_offset=len(code_vocab))
+        ast_vocab = init_vocab(name=args.ast_vocab_name,
+                               method='word',
+                               datasets=[datasets['train'].asts],
+                               save_root=args.vocab_root,
+                               index_offset=len(code_vocab) + len(nl_vocab))
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
     logger.info(f'The size of nl vocabulary: {len(nl_vocab)}')
     logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
