@@ -69,20 +69,23 @@ def run_translation(
             nl_vocab = load_vocab(vocab_root=trained_vocab, name=args.nl_vocab_name)
     else:
         logger.info('Building vocabularies')
-        code_vocab = init_vocab(name=args.code_vocab_name,
+        code_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
+                                name=args.code_vocab_name,
                                 method=args.code_tokenize_method,
                                 vocab_size=args.code_vocab_size,
                                 datasets=[datasets['train'].codes, datasets['train'].targets],
                                 ignore_case=True,
                                 save_root=args.vocab_root)
-        nl_vocab = init_vocab(name=args.nl_vocab_name,
+        nl_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
+                              name=args.nl_vocab_name,
                               method=args.nl_tokenize_method,
                               vocab_size=args.nl_vocab_size,
                               datasets=[datasets['train'].names],
                               ignore_case=True,
                               save_root=args.vocab_root,
                               index_offset=len(code_vocab))
-        ast_vocab = init_vocab(name=args.ast_vocab_name,
+        ast_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
+                               name=args.ast_vocab_name,
                                method='word',
                                datasets=[datasets['train'].asts],
                                save_root=args.vocab_root,

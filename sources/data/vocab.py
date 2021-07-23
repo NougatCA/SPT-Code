@@ -370,7 +370,7 @@ def load_vocab(vocab_root, name) -> Vocab:
     return obj
 
 
-def init_vocab(args,
+def init_vocab(vocab_save_dir,
                name,
                method='word',
                vocab_size=None,
@@ -382,7 +382,7 @@ def init_vocab(args,
                load_if_saved=True) -> Vocab:
     vocab_name = '.'.join(
         [sub_name for sub_name in [name, method, str(vocab_size), index_offset] if sub_name is not None])
-    path = os.path.join(args.vocab_save_dir, f'{vocab_name}.pk')
+    path = os.path.join(vocab_save_dir, f'{vocab_name}.pk')
     if load_if_saved:
         if os.path.exists(path) and os.path.isfile(path):
             logger.info(f'Trying to load saved binary pickle file from: {path}')
