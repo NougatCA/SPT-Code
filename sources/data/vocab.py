@@ -381,7 +381,7 @@ def init_vocab(vocab_save_dir,
                index_offset=None,
                load_if_saved=True) -> Vocab:
     vocab_name = '.'.join(
-        [sub_name for sub_name in [name, method, str(vocab_size), index_offset] if sub_name is not None])
+        [sub_name for sub_name in [name, method, str(vocab_size), str(index_offset)] if sub_name is not None])
     path = os.path.join(vocab_save_dir, f'{vocab_name}.pk')
     if load_if_saved:
         if os.path.exists(path) and os.path.isfile(path):
@@ -399,3 +399,4 @@ def init_vocab(vocab_save_dir,
                   save_root=save_root,
                   index_offset=index_offset)
     vocab.save_pickle(path)
+    return vocab
