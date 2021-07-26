@@ -327,10 +327,10 @@ def save_all_datasets(args):
     #     _ = init_dataset(args=args,
     #                      mode=enums.TRAINING_MODE_FINE_TUNE,
     #                      task=enums.TASK_CLONE_DETECTION,
-    #                      language=lang,
+    #                      language=enums.LANG_JAVA,
     #                      split=split,
     #                      load_if_saved=False)
-    # # search
+    # # # search
     # for lang in [enums.LANG_JAVA, enums.LANG_GO, enums.LANG_PHP, enums.LANG_PYTHON, enums.LANG_RUBY,
     #              enums.LANG_JAVASCRIPT]:
     #     for split in ['codebase', 'train', 'valid', 'test']:
@@ -342,3 +342,13 @@ def save_all_datasets(args):
     #                          language=lang,
     #                          split=split,
     #                          load_if_saved=False)
+    # # completion
+    # for split in ['train', 'valid', 'test']:
+    #     logger.info('*' * 100)
+    #     logger.info(f'Completion - {split}')
+    #     _ = init_dataset(args=args,
+    #                      mode=enums.TRAINING_MODE_FINE_TUNE,
+    #                      task=enums.TASK_COMPLETION,
+    #                      language=enums.LANG_JAVA,
+    #                      split=split,
+    #                      load_if_saved=False)
