@@ -25,12 +25,12 @@ class RuntimeArguments:
     )
 
     batch_size: int = field(
-        default=128,
+        default=64,
         metadata={'help': 'Batch size for training on each device'}
     )
 
     eval_batch_size: int = field(
-        default=256,
+        default=128,
         metadata={'help': 'Batch size for evaluation on each device'}
     )
 
@@ -121,12 +121,12 @@ class PreprocessingArguments:
     """Arguments for data preprocessing."""
 
     code_vocab_size: int = field(
-        default=30000,
+        default=50000,
         metadata={'help': 'Maximum size of code vocab'}
     )
 
     nl_vocab_size: int = field(
-        default=20000,
+        default=30000,
         metadata={'help': 'Maximum size of nl vocab'}
     )
 
@@ -178,22 +178,22 @@ class ModelArguments:
     """Arguments for model related hyper-parameters"""
 
     d_model: int = field(
-        default=512,
+        default=768,
         metadata={'help': 'Dimension of the model'}
     )
 
     d_ff: int = field(
-        default=2048,
+        default=3072,
         metadata={'help': 'Dimension of the feed forward layer'}
     )
 
     n_head: int = field(
-        default=8,
+        default=12,
         metadata={'help': 'Number of head of self attention'}
     )
 
     n_layer: int = field(
-        default=6,
+        default=12,
         metadata={'help': 'Number of layer'}
     )
 
@@ -214,7 +214,7 @@ class OptimizerArguments:
     """Arguments for optimizer, early stopping, warmup, grad clipping, label smoothing."""
 
     learning_rate: float = field(
-        default=5e-5,
+        default=3e-4,
         metadata={'help': 'Learning rate'}
     )
 
