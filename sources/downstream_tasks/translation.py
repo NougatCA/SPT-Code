@@ -195,6 +195,7 @@ def run_translation(
                                              logging_strategy=IntervalStrategy.STEPS,
                                              logging_steps=args.tensor_board_logging_steps,
                                              save_strategy=IntervalStrategy.EPOCH,
+                                             save_total_limit=5,
                                              seed=args.random_seed,
                                              dataloader_drop_last=False,
                                              run_name=args.model_name,
