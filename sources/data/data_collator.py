@@ -318,6 +318,7 @@ def get_concat_batch_inputs(code_raw, code_vocab, max_code_len,
     padding_mask = torch.cat([code_padding_mask, ast_padding_mask, nl_padding_mask], dim=-1)
 
     return inputs, padding_mask
+    # return code_inputs, code_padding_mask
 
 
 def pad_batch(batch, pad_value=0):
