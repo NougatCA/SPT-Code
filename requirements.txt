@@ -1,3 +1,4 @@
+torch==1.7.1
 tokenizers==0.10.3
 nltk==3.5
 tqdm==4.49.0
@@ -6,4 +7,7 @@ psutil==5.8.0
 scikit-learn==0.24.2
 prettytable==2.0.0
 transformers==4.8.2
-dataclasses==0.8
+dataclasses
+antlr4-python3-runtime==4.9.2
+tree_sitter
+tensorboardX
