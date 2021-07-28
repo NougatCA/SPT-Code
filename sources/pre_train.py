@@ -44,14 +44,6 @@ def pre_train(args, tasks=None):
                             ignore_case=True,
                             save_root=args.vocab_root)
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
-    # ast vocab
-    ast_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
-                           name=args.ast_vocab_name,
-                           method='word',
-                           datasets=[dataset.asts],
-                           ignore_case=True,
-                           save_root=args.vocab_root)
-    logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
     # nl vocab
     nl_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
                           name=args.nl_vocab_name,
@@ -59,8 +51,17 @@ def pre_train(args, tasks=None):
                           vocab_size=args.nl_vocab_size,
                           datasets=[dataset.names, dataset.docs] if hasattr(dataset, 'docs') else [dataset.names],
                           ignore_case=True,
-                          save_root=args.vocab_root)
+                          save_root=args.vocab_root,
+                          index_offset=len(code_vocab))
     logger.info(f'The size of nl vocabulary: {len(nl_vocab)}')
+    # ast vocab
+    ast_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
+                           name=args.ast_vocab_name,
+                           method='word',
+                           datasets=[dataset.asts],
+                           save_root=args.vocab_root,
+                           index_offset=len(code_vocab) + len(nl_vocab))
+    logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
 
     logger.info('Vocabularies built successfully')
 
@@ -124,14 +125,13 @@ def pre_train(args, tasks=None):
                                               learning_rate=args.learning_rate,
                                               weight_decay=args.lr_decay_rate,
                                               max_grad_norm=args.grad_clipping_norm,
-                                              num_train_epochs=args.pre_train_n_epoch,
+                                              num_train_epochs=2,
                                               lr_scheduler_type=SchedulerType.LINEAR,
                                               warmup_steps=args.warmup_steps,
                                               logging_dir=os.path.join(args.tensor_board_root, task),
                                               logging_strategy=IntervalStrategy.STEPS,
                                               logging_steps=args.tensor_board_logging_steps,
-                                              save_strategy=IntervalStrategy.EPOCH,
-                                              save_total_limit=5,
+                                              save_strategy=IntervalStrategy.NO,
                                               seed=args.random_seed,
                                               dataloader_drop_last=False,
                                               run_name=args.model_name,
@@ -181,14 +181,13 @@ def pre_train(args, tasks=None):
                                                      learning_rate=args.learning_rate,
                                                      weight_decay=args.lr_decay_rate,
                                                      max_grad_norm=args.grad_clipping_norm,
-                                                     num_train_epochs=args.pre_train_n_epoch,
+                                                     num_train_epochs=10,
                                                      lr_scheduler_type=SchedulerType.LINEAR,
                                                      warmup_steps=args.warmup_steps,
                                                      logging_dir=os.path.join(args.tensor_board_root, task),
                                                      logging_strategy=IntervalStrategy.STEPS,
                                                      logging_steps=args.tensor_board_logging_steps,
-                                                     save_strategy=IntervalStrategy.EPOCH,
-                                                     save_total_limit=5,
+                                                     save_strategy=IntervalStrategy.NO,
                                                      seed=args.random_seed,
                                                      dataloader_drop_last=False,
                                                      run_name=args.model_name,
@@ -240,14 +239,13 @@ def pre_train(args, tasks=None):
                                                      learning_rate=args.learning_rate,
                                                      weight_decay=args.lr_decay_rate,
                                                      max_grad_norm=args.grad_clipping_norm,
-                                                     num_train_epochs=args.pre_train_n_epoch,
+                                                     num_train_epochs=10,
                                                      lr_scheduler_type=SchedulerType.LINEAR,
                                                      warmup_steps=args.warmup_steps,
                                                      logging_dir=os.path.join(args.tensor_board_root, task),
                                                      logging_strategy=IntervalStrategy.STEPS,
                                                      logging_steps=args.tensor_board_logging_steps,
-                                                     save_strategy=IntervalStrategy.EPOCH,
-                                                     save_total_limit=5,
+                                                     save_strategy=IntervalStrategy.NO,
                                                      seed=args.random_seed,
                                                      dataloader_drop_last=False,
                                                      run_name=args.model_name,
