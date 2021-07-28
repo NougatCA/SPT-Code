@@ -23,8 +23,9 @@ def main(args):
     # train(args, task=enums.TASK_SUMMARIZATION)
 
     # train(args,
-    #       model_dir='../outputs/default_model_20210622_095911/models/',
-    #       vocab_dir='../outputs/default_model_20210622_095911/vocabs/',
+    #       task=enums.TASK_SUMMARIZATION,
+    #       trained_model='../outputs/default_model_20210727_030441/models/',
+    #       trained_vocab='../outputs/default_model_20210727_030441/vocabs/',
     #       only_test=True)
 
     # only init dataset and save

@@ -15,12 +15,12 @@ class RuntimeArguments:
     )
 
     n_epoch: int = field(
-        default=200,
+        default=10,
         metadata={'help': 'Number of data iterations for training'}
     )
 
     pre_train_n_epoch: int = field(
-        default=5,
+        default=10,
         metadata={'help': 'Number of data iterations for pre-training on each task'}
     )
 
@@ -30,7 +30,7 @@ class RuntimeArguments:
     )
 
     eval_batch_size: int = field(
-        default=128,
+        default=64,
         metadata={'help': 'Batch size for evaluation on each device'}
     )
 
@@ -146,17 +146,17 @@ class PreprocessingArguments:
     )
 
     max_code_len: int = field(
-        default=200,
+        default=256,
         metadata={'help': 'Maximum length of code sequence'}
     )
 
     max_ast_len: int = field(
-        default=30,
+        default=32,
         metadata={'help': 'Maximum length of ast sequence'}
     )
 
     max_nl_len: int = field(
-        default=50,
+        default=64,
         metadata={'help': 'Maximum length of the nl sequence'}
     )
 
@@ -214,7 +214,7 @@ class OptimizerArguments:
     """Arguments for optimizer, early stopping, warmup, grad clipping, label smoothing."""
 
     learning_rate: float = field(
-        default=3e-4,
+        default=5e-5,
         metadata={'help': 'Learning rate'}
     )
 

@@ -298,28 +298,28 @@ def save_all_datasets(args):
     #                  mode=enums.TRAINING_MODE_PRE_TRAIN,
     #                  load_if_saved=False)
     # # summarization
-    # for lang in [enums.LANG_JAVA, enums.LANG_GO, enums.LANG_PHP, enums.LANG_PYTHON, enums.LANG_RUBY,
-    #              enums.LANG_JAVASCRIPT]:
-    #     for split in ['train', 'valid', 'test']:
-    #         logger.info('*' * 100)
-    #         logger.info(f'Summarization - {lang} - {split}')
-    #         _ = init_dataset(args=args,
-    #                          mode=enums.TRAINING_MODE_FINE_TUNE,
-    #                          task=enums.TASK_SUMMARIZATION,
-    #                          language=lang,
-    #                          split=split,
-    #                          load_if_saved=False)
-    # translation
-    for lang in ['java-c_sharp', 'c_sharp-java']:
+    for lang in [enums.LANG_JAVA, enums.LANG_GO, enums.LANG_PHP, enums.LANG_PYTHON, enums.LANG_RUBY,
+                 enums.LANG_JAVASCRIPT]:
         for split in ['train', 'valid', 'test']:
             logger.info('*' * 100)
-            logger.info(f'Translation - {lang} - {split}')
+            logger.info(f'Summarization - {lang} - {split}')
             _ = init_dataset(args=args,
                              mode=enums.TRAINING_MODE_FINE_TUNE,
-                             task=enums.TASK_TRANSLATION,
+                             task=enums.TASK_SUMMARIZATION,
                              language=lang,
                              split=split,
                              load_if_saved=False)
+    # translation
+    # for lang in ['java-c_sharp', 'c_sharp-java']:
+    #     for split in ['train', 'valid', 'test']:
+    #         logger.info('*' * 100)
+    #         logger.info(f'Translation - {lang} - {split}')
+    #         _ = init_dataset(args=args,
+    #                          mode=enums.TRAINING_MODE_FINE_TUNE,
+    #                          task=enums.TASK_TRANSLATION,
+    #                          language=lang,
+    #                          split=split,
+    #                          load_if_saved=False)
     # # clone
     # for split in ['train', 'valid', 'test']:
     #     logger.info('*' * 100)
