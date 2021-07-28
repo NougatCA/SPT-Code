@@ -169,7 +169,10 @@ def run_translation(
         refs = [ref.strip().split() for ref in decoded_labels]
         cans = [can.strip().split() for can in decoded_preds]
         result.update(bleu(references=refs, candidates=cans))
-        result.update(meteor(references=refs, candidates=cans))
+        try:
+            result.update(meteor(references=refs, candidates=cans))
+        except Exception:
+            pass
         result.update(rouge_l(references=refs, candidates=cans))
         result.update(avg_ir_metrics(references=refs, candidates=cans))
         result.update(accuracy_for_sequence(references=refs, candidates=cans))
