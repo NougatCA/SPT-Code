@@ -389,6 +389,8 @@ def init_vocab(vocab_save_dir,
             with open(path, mode='rb') as f:
                 obj = pickle.load(f)
             assert isinstance(obj, Vocab)
+            if save_root:
+                obj.save(save_root)
             return obj
     vocab = Vocab(name=name,
                   method=method,
