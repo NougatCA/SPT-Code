@@ -15,7 +15,7 @@ class RuntimeArguments:
     )
 
     n_epoch: int = field(
-        default=10,
+        default=1,
         metadata={'help': 'Number of data iterations for training'}
     )
 
@@ -25,12 +25,12 @@ class RuntimeArguments:
     )
 
     batch_size: int = field(
-        default=64,
+        default=4,
         metadata={'help': 'Batch size for training on each device'}
     )
 
     eval_batch_size: int = field(
-        default=64,
+        default=8,
         metadata={'help': 'Batch size for evaluation on each device'}
     )
 
