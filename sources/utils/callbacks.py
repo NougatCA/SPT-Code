@@ -44,6 +44,13 @@ class LogStateCallBack(TrainerCallback):
         for metric, value in metrics.items():
             logger.debug(f'{metric}: {value}')
 
+    def on_log(self,
+               args: TrainingArguments,
+               state: TrainerState,
+               control: TrainerControl, logs: Dict[str, float],
+               **kwargs):
+        logger.debug(logs)
+
 
 class SearchValidCallBack(TrainerCallback):
 
