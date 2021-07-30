@@ -17,10 +17,10 @@ from data.dataset import save_all_datasets
 
 def main(args):
     # model, vocabs = pre_train(args, tasks=[enums.TASK_MASS])
-    model, vocabs = pre_train(args)
+    # model, vocabs = pre_train(args)
     # train(args, trained_model=model, trained_vocab=vocabs)
 
-    # train(args, task=enums.TASK_SUMMARIZATION)
+    train(args, task=enums.TASK_TRANSLATION)
 
     # train(args,
     #       task=enums.TASK_SUMMARIZATION,
