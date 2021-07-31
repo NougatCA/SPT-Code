@@ -15,7 +15,7 @@ class RuntimeArguments:
     )
 
     n_epoch: int = field(
-        default=1,
+        default=100,
         metadata={'help': 'Number of data iterations for training'}
     )
 
@@ -25,12 +25,12 @@ class RuntimeArguments:
     )
 
     batch_size: int = field(
-        default=4,
+        default=64,
         metadata={'help': 'Batch size for training on each device'}
     )
 
     eval_batch_size: int = field(
-        default=8,
+        default=128,
         metadata={'help': 'Batch size for evaluation on each device'}
     )
 
@@ -45,7 +45,7 @@ class RuntimeArguments:
     )
 
     cuda_visible_devices: str = field(
-        default=None,
+        default='4,5,6,7',
         metadata={'help': 'Visible cuda devices, string formatted, device number divided by \',\', e.g., \'0, 2\', '
                           '\'None\' will use all'}
     )
