@@ -16,17 +16,16 @@ from data.dataset import save_all_datasets
 
 
 def main(args):
-    # model, vocabs = pre_train(args, tasks=[enums.TASK_MASS])
+    # model, vocabs = pre_train(args, tasks=[enums.TASK_CODE_AST_PREDICTION, enums.TASK_METHOD_NAME_PREDICTION])
     # model, vocabs = pre_train(args)
     # train(args, trained_model=model, trained_vocab=vocabs)
 
-    train(args, task=enums.TASK_SUMMARIZATION)
+    # train(args, task=enums.TASK_COMPLETION)
 
-    # train(args,
-    #       task=enums.TASK_SUMMARIZATION,
-    #       trained_model='../outputs/default_model_20210727_030441/models/',
-    #       trained_vocab='../outputs/default_model_20210727_030441/vocabs/',
-    #       only_test=True)
+    train(args,
+          task=enums.TASK_COMPLETION,
+          trained_model='../pre_trained/models/all/',
+          trained_vocab='../pre_trained/vocabs/')
 
     # only init dataset and save
     # save_all_datasets(args)
