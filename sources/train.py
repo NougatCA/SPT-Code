@@ -47,6 +47,10 @@ def train(
     logger.info('*' * 100)
     if trained_model:
         logger.info('Fine-tuning from pre-trained model and vocab')
+        if isinstance(trained_model, str):
+            logger.info(f'Model dir: {trained_model}')
+        if isinstance(trained_vocab, str):
+            logger.info(f'Vocab dir: {trained_vocab}')
     else:
         logger.info('Training from scratch')
 
