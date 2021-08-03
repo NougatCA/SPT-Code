@@ -720,8 +720,11 @@ def load_clone_mapping(dataset_root):
         dict: Mapping from code id to source code
 
     """
+    path = os.path.join(dataset_root, 'fine_tune', enums.TASK_CLONE_DETECTION, 'data.jsonl')
+    if not os.path.exists(path):
+        return None
     mapping = dict()
-    with open(os.path.join(dataset_root, 'fine_tune', enums.TASK_CLONE_DETECTION, 'data.jsonl'), encoding='utf-8') as f:
+    with open(path, encoding='utf-8') as f:
         for line in f.readlines():
             data = json.loads(line.strip())
             code_id = data['idx']
