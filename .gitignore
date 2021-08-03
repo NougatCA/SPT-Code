@@ -133,3 +133,4 @@ dmypy.json
 
 # outputs dir
 outputs/
+pre_trained/
