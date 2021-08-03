@@ -116,6 +116,7 @@ class CodeDataset(Dataset):
             # code clone detection
             elif task == enums.TASK_CLONE_DETECTION:
                 assert split in ['train', 'valid', 'test']
+                assert clone_mapping
                 path = os.path.join(self.dataset_dir, f'{split}.txt')
                 self.paths['file'] = path
                 self.codes_1, self.asts_1, self.names_1, \
