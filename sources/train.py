@@ -10,6 +10,7 @@ from downstream_tasks.translation import run_translation
 from downstream_tasks.search import run_search
 from downstream_tasks.clone import run_clone_detection
 from downstream_tasks.completion import run_completion
+from downstream_tasks.search_no_trainer import run_search_no_trainer
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +67,14 @@ def train(
                         trained_vocab=trained_vocab,
                         only_test=only_test)
     elif task == enums.TASK_SEARCH:
-        run_search(args=args,
-                   trained_model=trained_model,
-                   trained_vocab=trained_vocab,
-                   only_test=only_test)
+        # run_search(args=args,
+        #            trained_model=trained_model,
+        #            trained_vocab=trained_vocab,
+        #            only_test=only_test)
+        run_search_no_trainer(args=args,
+                              trained_model=trained_model,
+                              trained_vocab=trained_vocab,
+                              only_test=only_test)
     elif task == enums.TASK_CLONE_DETECTION:
         run_clone_detection(args=args,
                             trained_model=trained_model,
