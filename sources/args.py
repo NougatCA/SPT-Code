@@ -25,12 +25,12 @@ class RuntimeArguments:
     )
 
     batch_size: int = field(
-        default=64,
+        default=16,
         metadata={'help': 'Batch size for training on each device'}
     )
 
     eval_batch_size: int = field(
-        default=128,
+        default=32,
         metadata={'help': 'Batch size for evaluation on each device'}
     )
 
@@ -45,7 +45,7 @@ class RuntimeArguments:
     )
 
     cuda_visible_devices: str = field(
-        default='4,5,6,7',
+        default=None,
         metadata={'help': 'Visible cuda devices, string formatted, device number divided by \',\', e.g., \'0, 2\', '
                           '\'None\' will use all'}
     )
