@@ -396,22 +396,23 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
         neg_sim = f.cosine_similarity(code_representation, neg_nl_representation)
 
         loss = (0.413 - pos_sim + neg_sim).clamp(min=1e-6).mean()
+        return loss
 
-        if not return_dict:
-            output = (code_representation,) + code_outputs[1:]
-            return ((loss,) + output) if loss is not None else output
-
-        return Seq2SeqSequenceClassifierOutput(
-            loss=loss,
-            logits=code_representation,
-            past_key_values=code_outputs.past_key_values,
-            decoder_hidden_states=code_outputs.decoder_hidden_states,
-            decoder_attentions=code_outputs.decoder_attentions,
-            cross_attentions=code_outputs.cross_attentions,
-            encoder_last_hidden_state=code_outputs.encoder_last_hidden_state,
-            encoder_hidden_states=code_outputs.encoder_hidden_states,
-            encoder_attentions=code_outputs.encoder_attentions,
-        )
+        # if not return_dict:
+        #     output = (code_representation,) + code_outputs[1:]
+        #     return ((loss,) + output) if loss is not None else output
+        #
+        # return Seq2SeqSequenceClassifierOutput(
+        #     loss=loss,
+        #     logits=code_representation,
+        #     past_key_values=code_outputs.past_key_values,
+        #     decoder_hidden_states=code_outputs.decoder_hidden_states,
+        #     decoder_attentions=code_outputs.decoder_attentions,
+        #     cross_attentions=code_outputs.cross_attentions,
+        #     encoder_last_hidden_state=code_outputs.encoder_last_hidden_state,
+        #     encoder_hidden_states=code_outputs.encoder_hidden_states,
+        #     encoder_attentions=code_outputs.encoder_attentions,
+        # )
 
     def evaluate_search(self,
                         query_dataloader: torch.utils.data.dataloader.DataLoader,
