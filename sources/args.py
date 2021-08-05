@@ -1,7 +1,6 @@
 
 import dataclasses
 from dataclasses import dataclass, field
-import time
 import os
 
 
@@ -70,21 +69,6 @@ class SavingArguments:
         metadata={'help': 'Name of the model'}
     )
 
-    output_root: str = field(
-        default='../outputs/{}_{}'.format(model_name.default, time.strftime('%Y%m%d_%H%M%S', time.localtime())),
-        metadata={'help': 'Root directory for the output of this run'}
-    )
-
-    pre_train_output_root: str = field(
-        default=os.path.join(output_root.default, 'pre_train'),
-        metadata={'help': 'Root for outputs during pre-training'}
-    )
-
-    checkpoint_root: str = field(
-        default=os.path.join(output_root.default, 'checkpoints'),
-        metadata={'help': 'Root for saving checkpoints'}
-    )
-
     dataset_save_dir: str = field(
         default=os.path.join(DatasetArguments.dataset_root, 'dataset_saved'),
         metadata={'help': 'Directory to save and load dataset pickle instance'}
@@ -93,21 +77,6 @@ class SavingArguments:
     vocab_save_dir: str = field(
         default=os.path.join(DatasetArguments.dataset_root, 'vocab_saved'),
         metadata={'help': 'Directory to save and load vocab pickle instance'}
-    )
-
-    model_root: str = field(
-        default=os.path.join(output_root.default, 'models'),
-        metadata={'help': 'Root for saving models'}
-    )
-
-    vocab_root: str = field(
-        default=os.path.join(output_root.default, 'vocabs'),
-        metadata={'help': 'Root for saving vocabs'}
-    )
-
-    tensor_board_root: str = field(
-        default=os.path.join(output_root.default, 'runs'),
-        metadata={'help': 'Directory for tensor board logging'}
     )
 
     tensor_board_logging_steps: int = field(

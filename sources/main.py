@@ -6,6 +6,7 @@ import numpy as np
 import logging
 import os
 import sys
+import time
 from prettytable import PrettyTable
 
 from args import add_args
@@ -23,7 +24,7 @@ def main(args):
     # train(args, task=enums.TASK_COMPLETION)
 
     train(args,
-          task=enums.TASK_SEARCH,
+          task=enums.TASK_SUMMARIZATION,
           trained_model='../pre_trained/models/all/',
           trained_vocab='../pre_trained/vocabs/')
 
@@ -40,7 +41,22 @@ if __name__ == '__main__':
 
     main_args = parser.parse_args()
 
-    # make dirs
+    # define and make dirs
+    # Root directory for the output of this run
+    main_args.output_root = os.path.join(
+        '..',
+        'outputs',
+        '{}_{}'.format(main_args.model_name, time.strftime('%Y%m%d_%H%M%S', time.localtime())))
+    # Root for outputs during pre-training
+    main_args.pre_train_output_root = os.path.join(main_args.output_root, 'pre_train')
+    # Root for saving checkpoints
+    main_args.checkpoint_root = os.path.join(main_args.output_root, 'checkpoints')
+    # Root for saving models
+    main_args.model_root = os.path.join(main_args.output_root, 'models')
+    # Root for saving vocabs
+    main_args.vocab_root = os.path.join(main_args.output_root, 'vocabs')
+    # Rot for tensorboard
+    main_args.tensor_board_root = os.path.join(main_args.output_root, 'runs')
     for d in [main_args.checkpoint_root, main_args.model_root, main_args.vocab_root, main_args.tensor_board_root,
               main_args.dataset_save_dir, main_args.vocab_save_dir]:
         if not os.path.exists(d):
