@@ -14,7 +14,7 @@ class RuntimeArguments:
     )
 
     n_epoch: int = field(
-        default=500,
+        default=200,
         metadata={'help': 'Number of data iterations for training'}
     )
 
@@ -233,7 +233,7 @@ class TaskArguments:
     )
 
     summarization_language: str = field(
-        default='java',
+        default='python',
         metadata={'help': 'Language of the source code in code summarization, also the directory of the dataset dir'}
     )
 

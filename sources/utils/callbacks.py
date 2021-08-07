@@ -48,7 +48,7 @@ class LogStateCallBack(TrainerCallback):
         logger.debug(f'Evaluation after epoch {state.epoch} finished')
         for metric, score in metrics.items():
             logger.debug(f'{metric}: {score}')
-        logger.debug(f'Best model at epoch {self.map_step_epoch[state.best_model_checkpoint]} '
+        logger.debug(f'Best model at epoch {self.map_step_epoch[state.best_model_checkpoint] if state.best_model_checkpoint in self.map_step_epoch else -1} '
                      f'/ step {state.best_model_checkpoint}, scores: {state.best_metric}')
 
 

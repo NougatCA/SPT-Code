@@ -261,50 +261,34 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                 f"Passing input embeddings is currently not supported for {self.__class__.__name__}"
             )
 
-        # outputs = self.model(
-        #     input_ids,
-        #     attention_mask=attention_mask,
-        #     decoder_input_ids=decoder_input_ids,
-        #     decoder_attention_mask=decoder_attention_mask,
-        #     head_mask=head_mask,
-        #     decoder_head_mask=decoder_head_mask,
-        #     cross_attn_head_mask=cross_attn_head_mask,
-        #     encoder_outputs=encoder_outputs,
-        #     inputs_embeds=inputs_embeds,
-        #     decoder_inputs_embeds=decoder_inputs_embeds,
-        #     use_cache=use_cache,
-        #     output_attentions=output_attentions,
-        #     output_hidden_states=output_hidden_states,
-        #     return_dict=return_dict,
-        # )
-        # hidden_states = outputs[0]  # last hidden state
-        #
-        # eos_mask = input_ids.eq(self.config.eos_token_id)
-        #
-        # if len(torch.unique(eos_mask.sum(1))) > 1:
-        #     raise ValueError("All examples must have the same number of <eos> tokens.")
-        # sentence_representation = hidden_states[eos_mask, :].view(hidden_states.size(0), -1,
-        #                                                           hidden_states.size(-1))[
-        #                           :, -1, :
-        #                           ]
-        # logits = self.classification_head(sentence_representation)
-        representation, outputs = self.forward_representation(input_ids=input_ids,
-                                                              attention_mask=attention_mask,
-                                                              decoder_input_ids=decoder_input_ids,
-                                                              decoder_attention_mask=decoder_attention_mask,
-                                                              head_mask=head_mask,
-                                                              decoder_head_mask=decoder_head_mask,
-                                                              cross_attn_head_mask=cross_attn_head_mask,
-                                                              encoder_outputs=encoder_outputs,
-                                                              past_key_values=past_key_values,
-                                                              inputs_embeds=inputs_embeds,
-                                                              decoder_inputs_embeds=decoder_inputs_embeds,
-                                                              labels=labels,
-                                                              use_cache=use_cache,
-                                                              output_attentions=output_attentions,
-                                                              output_hidden_states=output_hidden_states,
-                                                              return_dict=return_dict)
-        logits = self.classification_head(representation)
+        outputs = self.model(
+            input_ids,
+            attention_mask=attention_mask,
+            decoder_input_ids=decoder_input_ids,
+            decoder_attention_mask=decoder_attention_mask,
+            head_mask=head_mask,
+            decoder_head_mask=decoder_head_mask,
+            cross_attn_head_mask=cross_attn_head_mask,
+            encoder_outputs=encoder_outputs,
+            inputs_embeds=inputs_embeds,
+            decoder_inputs_embeds=decoder_inputs_embeds,
+            use_cache=use_cache,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+        hidden_states = outputs[0]  # last hidden state
+
+        eos_mask = input_ids.eq(self.config.eos_token_id)
+
+        if len(torch.unique(eos_mask.sum(1))) > 1:
+            raise ValueError("All examples must have the same number of <eos> tokens.")
+        sentence_representation = hidden_states[eos_mask, :].view(hidden_states.size(0), -1,
+                                                                  hidden_states.size(-1))[
+                                  :, -1, :
+                                  ]
+        logits = self.classification_head(sentence_representation)
+
         loss = None
         if labels is not None:
             if self.config.num_labels == 1:

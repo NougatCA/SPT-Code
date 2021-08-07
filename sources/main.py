@@ -24,7 +24,7 @@ def main(args):
     # train(args, task=enums.TASK_COMPLETION)
 
     train(args,
-          task=enums.TASK_TRANSLATION,
+          task=enums.TASK_SUMMARIZATION,
           trained_model='../pre_trained/models/all/',
           trained_vocab='../pre_trained/vocabs/')
 
