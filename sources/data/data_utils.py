@@ -542,6 +542,12 @@ def clean_doc(s):
         return s
 
 
+def convert_python_source_classical_summarization(source: str):
+    source = re.sub(r' *DCNL *', '\n', source)
+    source = re.sub(r' *DCSP *', '\t', source)
+    return source
+
+
 def parse_for_summarization(source_path, code_path, nl_path, lang):
     """
     Load and parse dataset for code summarization.
@@ -564,6 +570,8 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
     paths = {'source': source_path}
     logger.info(f'    Source code file: {source_path}')
     sources = load_lines(source_path)
+    # if lang == enums.LANG_PYTHON:
+    #     sources = [convert_python_source_classical_summarization(source) for source in sources]
 
     if not os.path.isfile(code_path):
         paths['code'] = source_path
