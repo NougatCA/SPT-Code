@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 class LogStateCallBack(TrainerCallback):
 
     epoch_timer = Timer()
+    map_step_epoch = {}
 
     def on_epoch_begin(self,
                        args: TrainingArguments,
@@ -23,6 +24,7 @@ class LogStateCallBack(TrainerCallback):
                        control: TrainerControl,
                        **kwargs):
         self.epoch_timer.reset()
+        logger.debug('-' * 100)
         logger.debug(f'Start epoch {state.epoch}')
 
     def on_epoch_end(self,
@@ -31,8 +33,11 @@ class LogStateCallBack(TrainerCallback):
                      control: TrainerControl,
                      optimizer: torch.optim.Optimizer,
                      **kwargs):
-        logger.debug('Epoch {} finished, time: {:.2f}s'.format(state.epoch, self.epoch_timer.time()))
-        logger.debug('learning rate: {:.6f}'.format(optimizer.param_groups[0]['lr']))
+        self.map_step_epoch[state.global_step] = state.epoch
+        logger.debug('Epoch {} / step {} finished, time: {:.2f}s'.format(state.epoch - 1,
+                                                                         state.global_step,
+                                                                         self.epoch_timer.time()))
+        logger.debug('learning rate: {}'.format(optimizer.param_groups[0]['lr']))
 
     def on_evaluate(self,
                     args: TrainingArguments,
@@ -41,15 +46,10 @@ class LogStateCallBack(TrainerCallback):
                     metrics: Dict[str, float],
                     **kwargs):
         logger.debug(f'Evaluation after epoch {state.epoch} finished')
-        for metric, value in metrics.items():
-            logger.debug(f'{metric}: {value}')
-
-    def on_log(self,
-               args: TrainingArguments,
-               state: TrainerState,
-               control: TrainerControl, logs: Dict[str, float],
-               **kwargs):
-        logger.debug(logs)
+        for metric, score in metrics.items():
+            logger.debug(f'{metric}: {score}')
+        logger.debug(f'Best model at epoch {self.map_step_epoch[state.best_model_checkpoint]} '
+                     f'/ step {state.best_model_checkpoint}, scores: {state.best_metric}')
 
 
 class SearchValidCallBack(TrainerCallback):
