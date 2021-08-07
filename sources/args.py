@@ -14,22 +14,22 @@ class RuntimeArguments:
     )
 
     n_epoch: int = field(
-        default=100,
+        default=500,
         metadata={'help': 'Number of data iterations for training'}
     )
 
     pre_train_n_epoch: int = field(
-        default=10,
+        default=50,
         metadata={'help': 'Number of data iterations for pre-training on each task'}
     )
 
     batch_size: int = field(
-        default=16,
+        default=8,
         metadata={'help': 'Batch size for training on each device'}
     )
 
     eval_batch_size: int = field(
-        default=32,
+        default=4,
         metadata={'help': 'Batch size for evaluation on each device'}
     )
 
@@ -38,9 +38,9 @@ class RuntimeArguments:
         metadata={'help': 'Beam width when using beam decoding, 1 to greedy decode'}
     )
 
-    log_state_every: int = field(
-        default=100,
-        metadata={'help': 'Log training state to log file every n files'}
+    logging_steps: int = field(
+        default=500,
+        metadata={'help': 'Log training state every n steps'}
     )
 
     cuda_visible_devices: str = field(
@@ -115,7 +115,7 @@ class PreprocessingArguments:
     )
 
     max_code_len: int = field(
-        default=256,
+        default=128,
         metadata={'help': 'Maximum length of code sequence'}
     )
 
@@ -139,6 +139,16 @@ class PreprocessingArguments:
         default='bpe',
         metadata={'help': 'Tokenize method of nl',
                   'choices': ['word', 'bpe']}
+    )
+
+    no_ast: bool = field(
+        default=False,
+        metadata={'help': 'Whether to eliminate AST from input'}
+    )
+
+    no_nl: bool = field(
+        default=False,
+        metadata={'help': 'Whether to eliminate natural language from input'}
     )
 
 
@@ -193,7 +203,7 @@ class OptimizerArguments:
     )
 
     early_stop_patience: int = field(
-        default=10,
+        default=20,
         metadata={'help': 'Stop training if performance does not improve in n epoch, 0 to disable'}
     )
 
