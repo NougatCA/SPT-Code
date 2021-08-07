@@ -92,7 +92,9 @@ def remove_white_characters(tokens):
 
     """
     s = ''.join(tokens).lower()
-    return re.sub(r'\s', '', s)
+    s = re.sub(r'\s', '', s)
+    s = re.sub(r'\W', '', s)
+    return s
 
 
 def accuracy_for_sequence(references, candidates):
