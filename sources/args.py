@@ -254,6 +254,12 @@ class TaskArguments:
         metadata={'help': 'Language of the source code in code search, also the directory of the dataset dir'}
     )
 
+    bug_fix_scale: str = field(
+        default='small',
+        metadata={'help': 'Scale of the bug fix dataset.',
+                  'choices': ['small', 'medium']}
+    )
+
 
 def transfer_arg_name(name):
     return '--' + name.replace('_', '-')

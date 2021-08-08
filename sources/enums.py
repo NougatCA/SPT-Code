@@ -16,6 +16,7 @@ TASK_TRANSLATION = 'translation'
 TASK_SEARCH = 'search'
 TASK_CLONE_DETECTION = 'clone'
 TASK_COMPLETION = 'completion'
+TASK_BUG_FIX = 'bug_fix'
 
 # programming language
 LANG_JAVA = 'java'
