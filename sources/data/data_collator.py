@@ -128,7 +128,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             max_len=args.max_nl_len,
         )
 
-    # translate
+    # translation
     elif task == enums.TASK_TRANSLATION:
 
         code_raw, ast_raw, name_raw, target_raw = map(list, zip(*batch))
@@ -252,6 +252,31 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             code_raw=code_raw,
             code_vocab=code_vocab,
             max_code_len=args.max_code_len,
+            ast_raw=ast_raw,
+            ast_vocab=ast_vocab,
+            max_ast_len=args.max_ast_len,
+            nl_raw=name_raw,
+            nl_vocab=nl_vocab,
+            max_nl_len=args.max_nl_len
+        )
+
+        model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
+            batch=target_raw,
+            vocab=code_vocab,
+            processor=Vocab.sos_processor,
+            max_len=32
+        )
+        model_inputs['labels'], _ = get_batch_inputs(batch=target_raw,
+                                                     vocab=code_vocab,
+                                                     processor=Vocab.eos_processor,
+                                                     max_len=32)
+    # bug fix
+    elif task == enums.TASK_BUG_FIX:
+        code_raw, ast_raw, name_raw, target_raw = map(list, zip(*batch))
+        model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(
+            code_raw=code_raw,
+            code_vocab=code_vocab,
+            max_code_len=64,
             ast_raw=ast_raw,
             ast_vocab=ast_vocab,
             max_ast_len=args.max_ast_len,

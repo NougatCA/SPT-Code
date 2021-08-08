@@ -860,3 +860,38 @@ def parse_for_completion(source_path, target_path):
         except Exception:
             continue
     return codes, asts, names, targets
+
+
+def parse_for_bug_fix(buggy_path, fixed_path):
+    """
+    Load and parse for bug fix.
+
+    Args:
+        buggy_path (str): Path of buggy code
+        fixed_path (str): Path of fixed code
+
+    Returns:
+        (list[str], list[str], list[str], list[str]):
+            - List of strings: source code
+            - List of strings: AST sequence
+            - List of strings: name sequence
+            - List of strings: target code
+
+    """
+    buggy_lines = load_lines(buggy_path)
+    fixed_lines = load_lines(fixed_path)
+    assert len(buggy_lines) == len(fixed_lines)
+    codes = []
+    asts = []
+    names = []
+    targets = []
+    for buggy, fixed in tqdm(zip(buggy_lines, fixed_lines), desc='Parsing', total=len(buggy_lines)):
+        try:
+            ast, name = generate_single_ast_nl(source=buggy, lang=enums.LANG_JAVA)
+            codes.append(buggy.lower())
+            asts.append(ast)
+            names.append(name.lower())
+            targets.append(fixed.lower())
+        except Exception:
+            continue
+    return codes, asts, names, targets

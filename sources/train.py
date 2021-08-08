@@ -11,6 +11,7 @@ from downstream_tasks.search import run_search
 from downstream_tasks.clone import run_clone_detection
 from downstream_tasks.completion import run_completion
 from downstream_tasks.search_no_trainer import run_search_no_trainer
+from downstream_tasks.bug_fix import run_bug_fix
 
 logger = logging.getLogger(__name__)
 
@@ -85,3 +86,8 @@ def train(
                        trained_model=trained_model,
                        trained_vocab=trained_vocab,
                        only_test=only_test)
+    elif task == enums.TASK_BUG_FIX:
+        run_bug_fix(args=args,
+                    trained_model=trained_model,
+                    trained_vocab=trained_vocab,
+                    only_test=only_test)

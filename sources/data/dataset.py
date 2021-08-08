@@ -7,7 +7,8 @@ import pickle
 
 import enums
 from .data_utils import load_dataset_from_dir, \
-    parse_for_summarization, parse_for_translation, parse_for_search, parse_for_clone, parse_for_completion
+    parse_for_summarization, parse_for_translation, parse_for_search, parse_for_clone, parse_for_completion, \
+    parse_for_bug_fix
 from eval.bleu.google_bleu import avg_bleu
 from data.vocab import Vocab
 
@@ -136,6 +137,20 @@ class CodeDataset(Dataset):
                                                                                        target_path=target_path)
                 assert len(self.codes) == len(self.asts) == len(self.names) == len(self.targets)
                 self.size = len(self.codes)
+            # bug fix
+            elif task == enums.TASK_BUG_FIX:
+                assert split in ['train', 'valid', 'test']
+                # language here stands for dataset scale
+                assert language in ['small', 'medium']
+                self.dataset_dir = os.path.join(self.dataset_dir, language)
+                buggy_path = os.path.join(self.dataset_dir, f'{split}.buggy-fixed.buggy')
+                fixed_path = os.path.join(self.dataset_dir, f'{split}.buggy-fixed.fixed')
+                self.paths['buggy'] = buggy_path
+                self.paths['fixed'] = fixed_path
+                self.codes, self.asts, self.names, self.targets = parse_for_bug_fix(buggy_path=buggy_path,
+                                                                                    fixed_path=fixed_path)
+                assert len(self.codes) == len(self.asts) == len(self.names) == len(self.targets)
+                self.size = len(self.codes)
 
     def __getitem__(self, index):
         # cap
@@ -216,6 +231,9 @@ class CodeDataset(Dataset):
                    self.codes_2[index], self.asts_2[index], self.names_2[index], self.labels[index]
         # code completion
         elif self.task == enums.TASK_COMPLETION:
+            return self.codes[index], self.asts[index], self.names[index], self.targets[index]
+        # bug fix
+        elif self.task == enums.TASK_BUG_FIX:
             return self.codes[index], self.asts[index], self.names[index], self.targets[index]
 
     def __len__(self):
