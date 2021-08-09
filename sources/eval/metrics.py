@@ -93,7 +93,6 @@ def remove_white_characters(tokens):
     """
     s = ''.join(tokens).lower()
     s = re.sub(r'\s', '', s)
-    s = re.sub(r'\W', '', s)
     return s
 
 
