@@ -1,8 +1,6 @@
-
 # training mode
 TRAINING_MODE_PRE_TRAIN = 'pre_train'
 TRAINING_MODE_FINE_TUNE = 'fine_tune'
-
 
 # pre-training task names
 TASK_CODE_AST_PREDICTION = 'cap'
@@ -17,6 +15,15 @@ TASK_SEARCH = 'search'
 TASK_CLONE_DETECTION = 'clone'
 TASK_COMPLETION = 'completion'
 TASK_BUG_FIX = 'bug_fix'
+
+ALL_DOWNSTREAM_TASK = [
+    TASK_SUMMARIZATION,
+    TASK_TRANSLATION,
+    TASK_SEARCH,
+    TASK_CLONE_DETECTION,
+    TASK_COMPLETION,
+    TASK_BUG_FIX
+]
 
 # programming language
 LANG_JAVA = 'java'
