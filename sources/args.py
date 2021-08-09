@@ -2,11 +2,23 @@
 import dataclasses
 from dataclasses import dataclass, field
 import os
+import enums
 
 
 @dataclass
 class RuntimeArguments:
     """Arguments for runtime."""
+
+    task: str = field(
+        default='summarization',
+        metadata={'help': 'Downstream task',
+                  'choices': enums.ALL_DOWNSTREAM_TASK}
+    )
+
+    train_from_scratch: bool = field(
+        default=False,
+        metadata={'help': 'Whether to train from scratch'}
+    )
 
     random_seed: int = field(
         default=42,
