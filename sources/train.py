@@ -35,8 +35,7 @@ def train(
         only_test (bool): True when only need to test, default to False
 
     """
-    assert task in [enums.TASK_SUMMARIZATION, enums.TASK_TRANSLATION, enums.TASK_SEARCH, enums.TASK_CLONE_DETECTION,
-                    enums.TASK_COMPLETION]
+    assert task in enums.ALL_DOWNSTREAM_TASK
     assert not only_test or isinstance(trained_model, str) or \
            isinstance(trained_model, BartForClassificationAndGeneration), \
            f'The model type is not supported, expect Bart model or string of path, got {type(trained_model)}'
