@@ -17,6 +17,7 @@ from data.dataset import save_all_datasets
 
 
 def main(args):
+
     # model, vocabs = pre_train(args, tasks=[enums.TASK_CODE_AST_PREDICTION, enums.TASK_METHOD_NAME_PREDICTION])
     # model, vocabs = pre_train(args)
     # train(args, trained_model=model, trained_vocab=vocabs)
@@ -24,9 +25,9 @@ def main(args):
     # train(args, task=enums.TASK_COMPLETION)
 
     train(args,
-          task=enums.TASK_SUMMARIZATION,
-          trained_model='../pre_trained/models/all/',
-          trained_vocab='../pre_trained/vocabs/')
+          task=args.task,
+          trained_model='../pre_trained/models/all/' if not args.train_from_scratch else None,
+          trained_vocab='../pre_trained/vocabs/' if not args.train_from_scratch else None)
 
     # only init dataset and save
     # save_all_datasets(args)
