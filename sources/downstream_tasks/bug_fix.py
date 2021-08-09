@@ -47,7 +47,7 @@ def run_bug_fix(
         datasets[split] = init_dataset(args=args,
                                        mode=enums.TRAINING_MODE_FINE_TUNE,
                                        task=enums.TASK_BUG_FIX,
-                                       language=args.bug_dix_scale,
+                                       language=args.bug_fix_scale,
                                        split=split)
         logger.info(f'The size of {split} set: {len(datasets[split])}')
     logger.info('Datasets loaded successfully')
