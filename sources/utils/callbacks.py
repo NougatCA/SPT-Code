@@ -48,8 +48,12 @@ class LogStateCallBack(TrainerCallback):
         logger.debug(f'Evaluation after epoch {state.epoch} finished')
         for metric, score in metrics.items():
             logger.debug(f'{metric}: {score}')
-        logger.debug(f'Best model at epoch {self.map_step_epoch[state.best_model_checkpoint] if state.best_model_checkpoint in self.map_step_epoch else -1} '
-                     f'/ step {state.best_model_checkpoint}, scores: {state.best_metric}')
+        try:
+            best_steps = int(state.best_model_checkpoint.split('-')[-1])
+        except Exception:
+            best_steps = -1
+        logger.debug(f'Best model at epoch {self.map_step_epoch[best_steps] if best_steps in self.map_step_epoch else -1} '
+                     f'/ step {best_steps}, scores: {state.best_metric}')
 
 
 class SearchValidCallBack(TrainerCallback):
