@@ -26,22 +26,22 @@ class RuntimeArguments:
     )
 
     n_epoch: int = field(
-        default=200,
+        default=50,
         metadata={'help': 'Number of data iterations for training'}
     )
 
     pre_train_n_epoch: int = field(
-        default=50,
+        default=10,
         metadata={'help': 'Number of data iterations for pre-training on each task'}
     )
 
     batch_size: int = field(
-        default=8,
+        default=64,
         metadata={'help': 'Batch size for training on each device'}
     )
 
     eval_batch_size: int = field(
-        default=4,
+        default=64,
         metadata={'help': 'Batch size for evaluation on each device'}
     )
 
@@ -51,7 +51,7 @@ class RuntimeArguments:
     )
 
     logging_steps: int = field(
-        default=500,
+        default=100,
         metadata={'help': 'Log training state every n steps'}
     )
 
@@ -59,6 +59,11 @@ class RuntimeArguments:
         default=None,
         metadata={'help': 'Visible cuda devices, string formatted, device number divided by \',\', e.g., \'0, 2\', '
                           '\'None\' will use all'}
+    )
+
+    fp16: bool = field(
+        default=False,
+        metadata={'help': 'Whether to use mixed precision'}
     )
 
 
@@ -127,7 +132,7 @@ class PreprocessingArguments:
     )
 
     max_code_len: int = field(
-        default=128,
+        default=256,
         metadata={'help': 'Maximum length of code sequence'}
     )
 
@@ -215,12 +220,12 @@ class OptimizerArguments:
     )
 
     early_stop_patience: int = field(
-        default=20,
+        default=10,
         metadata={'help': 'Stop training if performance does not improve in n epoch, 0 to disable'}
     )
 
     warmup_steps: int = field(
-        default=2000,
+        default=1000,
         metadata={'help': 'Warmup steps for optimizer, 0 to disable'}
     )
 

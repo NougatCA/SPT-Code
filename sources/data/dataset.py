@@ -316,59 +316,59 @@ def save_all_datasets(args):
     # _ = init_dataset(args=args,
     #                  mode=enums.TRAINING_MODE_PRE_TRAIN,
     #                  load_if_saved=False)
-    # # summarization
-    # for lang in [enums.LANG_JAVA, enums.LANG_GO, enums.LANG_PHP, enums.LANG_PYTHON, enums.LANG_RUBY,
-    #              enums.LANG_JAVASCRIPT]:
+    # summarization
+    for lang in [enums.LANG_JAVA, enums.LANG_GO, enums.LANG_PHP, enums.LANG_PYTHON, enums.LANG_RUBY,
+                 enums.LANG_JAVASCRIPT]:
+        for split in ['train', 'valid', 'test']:
+            logger.info('*' * 100)
+            logger.info(f'Summarization - {lang} - {split}')
+            _ = init_dataset(args=args,
+                             mode=enums.TRAINING_MODE_FINE_TUNE,
+                             task=enums.TASK_SUMMARIZATION,
+                             language=lang,
+                             split=split,
+                             load_if_saved=False)
+    # # translation
+    # for lang in ['java-c_sharp', 'c_sharp-java']:
     #     for split in ['train', 'valid', 'test']:
     #         logger.info('*' * 100)
-    #         logger.info(f'Summarization - {lang} - {split}')
+    #         logger.info(f'Translation - {lang} - {split}')
     #         _ = init_dataset(args=args,
     #                          mode=enums.TRAINING_MODE_FINE_TUNE,
-    #                          task=enums.TASK_SUMMARIZATION,
+    #                          task=enums.TASK_TRANSLATION,
     #                          language=lang,
     #                          split=split,
     #                          load_if_saved=False)
-    # translation
-    for lang in ['java-c_sharp', 'c_sharp-java']:
-        for split in ['train', 'valid', 'test']:
-            logger.info('*' * 100)
-            logger.info(f'Translation - {lang} - {split}')
-            _ = init_dataset(args=args,
-                             mode=enums.TRAINING_MODE_FINE_TUNE,
-                             task=enums.TASK_TRANSLATION,
-                             language=lang,
-                             split=split,
-                             load_if_saved=False)
-    # clone
-    from .data_utils import load_clone_mapping
-    code_mapping = load_clone_mapping(args.dataset_root)
-    for split in ['train', 'valid', 'test']:
-        logger.info('*' * 100)
-        logger.info(f'Clone - {split}')
-        _ = init_dataset(args=args,
-                         mode=enums.TRAINING_MODE_FINE_TUNE,
-                         task=enums.TASK_CLONE_DETECTION,
-                         split=split,
-                         clone_mapping=code_mapping,
-                         load_if_saved=False)
-    # # search
-    for lang in [enums.LANG_JAVA, enums.LANG_GO, enums.LANG_PHP, enums.LANG_PYTHON, enums.LANG_RUBY,
-                 enums.LANG_JAVASCRIPT]:
-        for split in ['codebase', 'train', 'valid', 'test']:
-            logger.info('*' * 100)
-            logger.info(f'Search - {lang} - {split}')
-            _ = init_dataset(args=args,
-                             mode=enums.TRAINING_MODE_FINE_TUNE,
-                             task=enums.TASK_SEARCH,
-                             language=lang,
-                             split=split,
-                             load_if_saved=False)
-    # completion
-    for split in ['train', 'valid', 'test']:
-        logger.info('*' * 100)
-        logger.info(f'Completion - {split}')
-        _ = init_dataset(args=args,
-                         mode=enums.TRAINING_MODE_FINE_TUNE,
-                         task=enums.TASK_COMPLETION,
-                         split=split,
-                         load_if_saved=False)
+    # # clone
+    # from .data_utils import load_clone_mapping
+    # code_mapping = load_clone_mapping(args.dataset_root)
+    # for split in ['train', 'valid', 'test']:
+    #     logger.info('*' * 100)
+    #     logger.info(f'Clone - {split}')
+    #     _ = init_dataset(args=args,
+    #                      mode=enums.TRAINING_MODE_FINE_TUNE,
+    #                      task=enums.TASK_CLONE_DETECTION,
+    #                      split=split,
+    #                      clone_mapping=code_mapping,
+    #                      load_if_saved=False)
+    # # # search
+    # for lang in [enums.LANG_JAVA, enums.LANG_GO, enums.LANG_PHP, enums.LANG_PYTHON, enums.LANG_RUBY,
+    #              enums.LANG_JAVASCRIPT]:
+    #     for split in ['codebase', 'train', 'valid', 'test']:
+    #         logger.info('*' * 100)
+    #         logger.info(f'Search - {lang} - {split}')
+    #         _ = init_dataset(args=args,
+    #                          mode=enums.TRAINING_MODE_FINE_TUNE,
+    #                          task=enums.TASK_SEARCH,
+    #                          language=lang,
+    #                          split=split,
+    #                          load_if_saved=False)
+    # # completion
+    # for split in ['train', 'valid', 'test']:
+    #     logger.info('*' * 100)
+    #     logger.info(f'Completion - {split}')
+    #     _ = init_dataset(args=args,
+    #                      mode=enums.TRAINING_MODE_FINE_TUNE,
+    #                      task=enums.TASK_COMPLETION,
+    #                      split=split,
+    #                      load_if_saved=False)
