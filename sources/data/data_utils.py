@@ -33,6 +33,43 @@ MAPPING_LANG_LEXER = {
 }
 
 
+def load_eval_lines(path):
+    """
+    Load and eval lines from given path.
+
+    Args:
+        path (str): Dataset file path
+
+    Returns:
+        list: List of lines
+
+    """
+    with open(path, encoding='utf-8') as f:
+        lines = [eval(line.strip()) for line in f]
+    return lines
+
+
+def load_eval_list_lines(path):
+    """
+    Load and eval lines from given path, each line is a list that will be convert into a string.
+
+    Args:
+        path (str): Dataset file path
+
+    Returns:
+        list: List of lines
+
+    """
+    lines = []
+    with open(path, encoding='utf-8') as f:
+        for line in f.readlines():
+            tokens = eval(line.strip())
+            string = ' '.join(tokens)
+            string = re.sub(r'\s+', ' ', string)
+            lines.append(string)
+    return lines
+
+
 def load_lines(path):
     """
     Load lines from given path.
@@ -570,8 +607,8 @@ def parse_for_summarization(source_path, code_path, nl_path, lang):
     paths = {'source': source_path}
     logger.info(f'    Source code file: {source_path}')
     sources = load_lines(source_path)
-    if lang == enums.LANG_PYTHON:
-        sources = [convert_python_source_classical_summarization(source) for source in sources]
+    # if lang == enums.LANG_PYTHON:
+    #     sources = [convert_python_source_classical_summarization(source) for source in sources]
 
     if not os.path.isfile(code_path):
         paths['code'] = source_path
