@@ -39,7 +39,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             max_ast_len=args.max_ast_len,
             nl_raw=name_raw,
             nl_vocab=nl_vocab,
-            max_nl_len=args.max_nl_len
+            max_nl_len=args.max_nl_len,
+            no_ast=args.no_ast,
+            no_nl=args.no_nl
         )
         model_inputs['labels'] = torch.tensor(is_ast, dtype=torch.long)
     # mass
@@ -56,7 +58,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             max_ast_len=args.max_ast_len,
             nl_raw=name_raw,
             nl_vocab=nl_vocab,
-            max_nl_len=args.max_nl_len
+            max_nl_len=args.max_nl_len,
+            no_ast=args.no_ast,
+            no_nl=args.no_nl
         )
         model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
             batch=target_raw,
@@ -82,7 +86,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             max_ast_len=args.max_ast_len,
             nl_raw=nl_raw,
             nl_vocab=nl_vocab,
-            max_nl_len=args.max_nl_len
+            max_nl_len=args.max_nl_len,
+            no_ast=args.no_ast,
+            no_nl=args.no_nl
         )
 
         model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
@@ -142,7 +148,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             max_ast_len=args.max_ast_len,
             nl_raw=name_raw,
             nl_vocab=nl_vocab,
-            max_nl_len=args.max_nl_len
+            max_nl_len=args.max_nl_len,
+            no_ast=args.no_ast,
+            no_nl=args.no_nl
         )
 
         model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
@@ -173,7 +181,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                 max_ast_len=args.max_ast_len,
                 nl_raw=name_raw,
                 nl_vocab=nl_vocab,
-                max_nl_len=args.max_nl_len
+                max_nl_len=args.max_nl_len,
+                no_ast=args.no_ast,
+                no_nl=args.no_nl
             )
 
             model_inputs['urls'] = url_raw
@@ -190,7 +200,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                 max_ast_len=args.max_ast_len,
                 nl_raw=name_raw,
                 nl_vocab=nl_vocab,
-                max_nl_len=args.max_nl_len
+                max_nl_len=args.max_nl_len,
+                no_ast=args.no_ast,
+                no_nl=args.no_nl
             )
 
             model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
@@ -231,7 +243,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             max_ast_len=args.max_ast_len,
             nl_raw=name_1_raw,
             nl_vocab=nl_vocab,
-            max_nl_len=args.max_nl_len
+            max_nl_len=args.max_nl_len,
+            no_ast=args.no_ast,
+            no_nl=args.no_nl
         )
         model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_concat_batch_inputs(
             code_raw=code_2_raw,
@@ -242,7 +256,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             max_ast_len=args.max_ast_len,
             nl_raw=name_2_raw,
             nl_vocab=nl_vocab,
-            max_nl_len=args.max_nl_len
+            max_nl_len=args.max_nl_len,
+            no_ast=args.no_ast,
+            no_nl=args.no_nl
         )
         model_inputs['labels'] = torch.tensor(labels, dtype=torch.long)
     # code completion
@@ -257,7 +273,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             max_ast_len=args.max_ast_len,
             nl_raw=name_raw,
             nl_vocab=nl_vocab,
-            max_nl_len=args.max_nl_len
+            max_nl_len=args.max_nl_len,
+            no_ast=args.no_ast,
+            no_nl=args.no_nl
         )
 
         model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
@@ -283,7 +301,9 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             max_ast_len=args.max_ast_len,
             nl_raw=name_raw,
             nl_vocab=nl_vocab,
-            max_nl_len=args.max_nl_len
+            max_nl_len=args.max_nl_len,
+            no_ast=args.no_ast,
+            no_nl=args.no_nl
         )
 
         model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
