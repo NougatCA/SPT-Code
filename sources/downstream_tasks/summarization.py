@@ -197,6 +197,7 @@ def run_summarization(
                                              save_strategy=IntervalStrategy.EPOCH,
                                              save_total_limit=5,
                                              seed=args.random_seed,
+                                             fp16=args.fp16,
                                              dataloader_drop_last=False,
                                              run_name=args.model_name,
                                              load_best_model_at_end=True,
