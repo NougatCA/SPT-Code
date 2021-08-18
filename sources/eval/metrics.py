@@ -80,18 +80,20 @@ def avg_ir_metrics(references, candidates):
     return {'avg_precision': total_p / size, 'avg_recall': total_r / size, 'avg_f1': total_f1 / size}
 
 
-def remove_white_characters(tokens):
+def remove_white_characters(s):
     """
     Join the list of tokens and remove all white characters.
 
     Args:
-        tokens (list[str]): List of tokens
+        s (Union(list[str], str)): List of tokens
 
     Returns:
         str: String after removing white characters
 
     """
-    s = ''.join(tokens).lower()
+    if isinstance(s, list):
+        s = ''.join(s)
+    s = s.lower()
     s = re.sub(r'\s', '', s)
     return s
 
@@ -138,16 +140,16 @@ def accuracy_top_k_for_sequence(references, candidates):
         which match the corresponding reference exactly (except white characters).
 
     Args:
-        references (list[list[str]]): A list of references, each reference should be a list of tokens
-        candidates (list[list[str]]): A list of candidates, each candidate should be a list of tokens
+        references (list[str]): A list of references, each reference should be a string
+        candidates (list[list[str]]): A list of candidates, each candidate should be a list of string
 
     Returns:
         dict[str, float]: Dict of mapping ir metric names to scores
 
     """
     references = [remove_white_characters(reference) for reference in references]
-    candidates = [remove_white_characters(candidate) for candidate in candidates]
-    return accuracy(references=references, candidates=candidates)
+    candidates = [[remove_white_characters(can) for can in candidate] for candidate in candidates]
+    return accuracy_top_k(references=references, candidates=candidates)
 
 
 def accuracy_top_k(references, candidates):
