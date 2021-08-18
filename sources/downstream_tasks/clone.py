@@ -1,5 +1,5 @@
 from transformers import BartConfig, TrainingArguments, EarlyStoppingCallback, \
-    IntervalStrategy, SchedulerType
+    IntervalStrategy, SchedulerType, BartForSequenceClassification
 
 import logging
 from typing import Union, Tuple
@@ -50,7 +50,7 @@ def run_clone_detection(
         datasets[split] = init_dataset(args=args,
                                        mode=enums.TRAINING_MODE_FINE_TUNE,
                                        task=enums.TASK_CLONE_DETECTION,
-                                       split=split,
+                                       split='test',
                                        clone_mapping=code_mapping)
         logger.info(f'The size of {split} set: {len(datasets[split])}')
     logger.info('Datasets loaded successfully')
@@ -134,8 +134,9 @@ def run_clone_detection(
                             min_length=1,
                             num_beams=args.beam_width,
                             num_labels=2)
-        model = BartForClassificationAndGeneration(config)
-    model.set_model_mode(enums.MODEL_MODE_CLS)
+        model = BartForSequenceClassification(config)
+        # model = BartForClassificationAndGeneration(config)
+    # model.set_model_mode(enums.MODEL_MODE_CLS)
     # log model statistics
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
     table = layer_wise_parameters(model)
