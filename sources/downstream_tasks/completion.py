@@ -1,18 +1,21 @@
 from transformers import BartConfig, Seq2SeqTrainingArguments, EarlyStoppingCallback, \
     IntervalStrategy, SchedulerType
+import torch
 
 import logging
 from typing import Union, Tuple
 import os
+from tqdm import tqdm
 
 import enums
 from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab, init_vocab
 from data.dataset import init_dataset
 from utils.general import count_params, human_format, layer_wise_parameters
-from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics, accuracy_for_sequence
+from eval.metrics import bleu, meteor, rouge_l, avg_ir_metrics, accuracy_for_sequence, accuracy_top_k_for_sequence
 from utils.callbacks import LogStateCallBack
 from utils.trainer import CodeTrainer
+from data.data_collator import collate_fn
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +199,7 @@ def run_completion(
                                              logging_strategy=IntervalStrategy.STEPS,
                                              logging_steps=args.logging_steps,
                                              save_strategy=IntervalStrategy.EPOCH,
-                                             save_total_limit=5,
+                                             save_total_limit=2,
                                              seed=args.random_seed,
                                              fp16=args.fp16,
                                              dataloader_drop_last=False,
@@ -257,11 +260,11 @@ def run_completion(
     trainer.log_metrics(split='test', metrics=predict_metrics)
     trainer.save_metrics(split='test', metrics=predict_metrics)
     # save testing results
-    with open(os.path.join(args.output_root, f'{enums.TASK_TRANSLATION}_test_results.txt'),
+    with open(os.path.join(args.output_root, f'{enums.TASK_COMPLETION}_test_results.txt'),
               mode='w', encoding='utf-8') as result_f, \
-            open(os.path.join(args.output_root, f'{enums.TASK_TRANSLATION}_test_refs.txt'),
+            open(os.path.join(args.output_root, f'{enums.TASK_COMPLETION}_test_refs.txt'),
                  mode='w', encoding='utf-8') as refs_f, \
-            open(os.path.join(args.output_root, f'{enums.TASK_TRANSLATION}_test_cans.txt'),
+            open(os.path.join(args.output_root, f'{enums.TASK_COMPLETION}_test_cans.txt'),
                  mode='w', encoding='utf-8') as cans_f:
         sample_id = 0
         for reference, candidate in zip(references, candidates):
@@ -277,3 +280,57 @@ def run_completion(
     logger.info('Testing finished')
     for name, score in predict_metrics.items():
         logger.info(f'{name}: {score}')
+
+    logger.info('-' * 100)
+    logger.info('Start testing accuracy at 5')
+    model.eval()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
+    torch.cuda.empty_cache()
+    test_dataloader = torch.utils.data.DataLoader(dataset=datasets['test'],
+                                                  batch_size=args.eval_batch_size,
+                                                  collate_fn=lambda batch: collate_fn(batch,
+                                                                                      args=args,
+                                                                                      task=enums.TASK_COMPLETION,
+                                                                                      code_vocab=code_vocab,
+                                                                                      nl_vocab=nl_vocab,
+                                                                                      ast_vocab=ast_vocab))
+    predictions = []
+    references = []
+    for step, batch in enumerate(tqdm(test_dataloader)):
+        batch_size = batch['input_ids'].size(0)
+        batch_outputs = model.generate(
+            input_ids=batch['input_ids'].to(device),
+            attention_mask=batch['attention_mask'].to(device),
+            max_length=args.completion_max_len,
+            min_length=3,
+            early_stopping=True,
+            num_beams=args.beam_width,
+            num_return_sequences=5
+        )
+        batch_outputs = batch_outputs.view(batch_size, -1, batch_outputs.size(-1))
+        for outputs in batch_outputs:
+            decoded = code_vocab.decode_batch(outputs.cpu().numpy())
+            predictions.append(decoded)
+
+        labels = code_vocab.decode_batch(batch['labels'].numpy())
+        references += labels
+
+    assert len(predictions) == len(references)
+    scores = accuracy_top_k_for_sequence(references=references, candidates=predictions)
+    for name, score in scores.items():
+        logger.info(f'{name}: {score}')
+
+    with open(os.path.join(args.output_root, f'{enums.TASK_COMPLETION}_test_top_k_results.txt'),
+              mode='w',
+              encoding='utf-8') as f:
+        sample_id = 0
+        for reference, candidate in zip(references, predictions):
+            f.write(f'sample {sample_id}:\n')
+            f.write(f'reference: {reference}\n')
+            for idx, can in enumerate(candidate):
+                f.write(f'candidate {idx}: {can}\n')
+            f.write('\n')
+            sample_id += 1
+        for name, score in scores.items():
+            f.write(f'{name}: {score}')
