@@ -57,23 +57,24 @@ def main(args):
     # train(args, trained_model=model, trained_vocab=vocabs)
 
     args.fp16 = True
-    args.task = enums.TASK_TRANSLATION
+    args.early_stop_patience = 5
+    args.task = enums.TASK_COMPLETION
 
     # no pre-training
-    args.model_name = f'{args.task}_no_pre_train'
-    args = remake(args)
-    train(args, task=args.task)
+    # args.model_name = f'{args.task}_no_pre_train'
+    # args = remake(args)
+    # train(args, task=args.task)
 
     # no single pre-training task
-    for pre_train_task in ['no_cap', 'no_mass', 'no_mng']:
-        args.model_name = f'{args.task}_{pre_train_task}'
-        args = remake(args)
-        train(args,
-              task=args.task,
-              trained_model=f'../pre_trained/models/{pre_train_task}/',
-              trained_vocab='../pre_trained/vocabs/')
-
-    # no ast
+    # for pre_train_task in ['no_cap', 'no_mng']:
+    #     args.model_name = f'{args.task}_{pre_train_task}'
+    #     args = remake(args)
+    #     train(args,
+    #           task=args.task,
+    #           trained_model=f'../pre_trained/models/{pre_train_task}/',
+    #           trained_vocab='../pre_trained/vocabs/')
+    #
+    # # no ast
     args.no_ast = True
     args.no_nl = False
     args.model_name = f'{args.task}_no_ast'
@@ -82,26 +83,26 @@ def main(args):
           task=args.task,
           trained_model=f'../pre_trained/models/all/',
           trained_vocab='../pre_trained/vocabs/')
-
-    # no nl
-    args.no_ast = False
-    args.no_nl = True
-    args.model_name = f'{args.task}_no_nl'
-    args = remake(args)
-    train(args,
-          task=args.task,
-          trained_model=f'../pre_trained/models/all/',
-          trained_vocab='../pre_trained/vocabs/')
+    #
+    # # no nl
+    # args.no_ast = False
+    # args.no_nl = True
+    # args.model_name = f'{args.task}_no_nl'
+    # args = remake(args)
+    # train(args,
+    #       task=args.task,
+    #       trained_model=f'../pre_trained/models/all/',
+    #       trained_vocab='../pre_trained/vocabs/')
 
     # only code
-    args.no_ast = True
-    args.no_nl = True
-    args.model_name = f'{args.task}_only_code'
-    args = remake(args)
-    train(args,
-          task=args.task,
-          trained_model=f'../pre_trained/models/all/',
-          trained_vocab='../pre_trained/vocabs/')
+    # args.no_ast = True
+    # args.no_nl = True
+    # args.model_name = f'{args.task}_only_code'
+    # args = remake(args)
+    # train(args,
+    #       task=args.task,
+    #       trained_model=f'../pre_trained/models/all/',
+    #       trained_vocab='../pre_trained/vocabs/')
 
     # only init dataset and save
     # save_all_datasets(args)
