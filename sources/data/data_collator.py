@@ -282,12 +282,12 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             batch=target_raw,
             vocab=code_vocab,
             processor=Vocab.sos_processor,
-            max_len=32
+            max_len=args.completion_max_len
         )
         model_inputs['labels'], _ = get_batch_inputs(batch=target_raw,
                                                      vocab=code_vocab,
                                                      processor=Vocab.eos_processor,
-                                                     max_len=32)
+                                                     max_len=args.completion_max_len)
     # bug fix
     elif task == enums.TASK_BUG_FIX:
         code_raw, ast_raw, name_raw, target_raw = map(list, zip(*batch))
