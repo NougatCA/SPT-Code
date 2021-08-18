@@ -254,6 +254,11 @@ class TaskArguments:
         metadata={'help': 'Language of the source code in code summarization, also the directory of the dataset dir'}
     )
 
+    completion_max_len: int = field(
+        default=32,
+        metadata={'help': 'Max length of code to completion'}
+    )
+
     translation_source_language: str = field(
         default='java',
         metadata={'help': 'Source language of the code translation',
