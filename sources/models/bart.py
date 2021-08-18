@@ -84,6 +84,7 @@ class BartForClassificationAndGeneration(BartForConditionalGeneration):
                                        neg_nl_attention_mask=neg_nl_attention_mask)
 
         elif self.mode == enums.MODEL_MODE_GEN:
+
             return self.forward_gen(input_ids=input_ids,
                                     attention_mask=attention_mask,
                                     decoder_input_ids=decoder_input_ids,
