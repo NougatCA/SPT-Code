@@ -1,9 +1,11 @@
+import torch.utils.data
 from torch.utils.data.dataset import Dataset
 
 import os
 import random
 import logging
 import pickle
+import random
 
 import enums
 from .data_utils import load_dataset_from_dir, \
@@ -248,6 +250,23 @@ class CodeDataset(Dataset):
         with open(path, mode='wb') as f:
             pickle.dump(self, f)
         logger.info(f'Dataset saved to {path}')
+
+    def subset(self, ratio):
+        """
+        Return a subset of self.
+
+        Args:
+            ratio (float): The ratio of size, must greater than 0 and less than/equal to 1
+
+        Returns:
+            Dataset: the subset
+
+        """
+        assert 0 < ratio <= 1, f'The subset ratio supposes to be 0 < ratio <= 1, but got ratio={ratio}'
+        if ratio == 1:
+            return self
+        indices = random.sample(range(self.size), int(self.size * ratio))
+        return torch.utils.data.Subset(self, indices)
 
 
 def init_dataset(args, mode, task=None, language=None, split=None, clone_mapping=None,
