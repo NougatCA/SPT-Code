@@ -76,6 +76,11 @@ class DatasetArguments:
         metadata={'help': 'Root of the dataset'}
     )
 
+    train_subset_ratio: float = field(
+        default=None,
+        metadata={'help': 'Ratio of train subset'}
+    )
+
 
 @dataclass
 class SavingArguments:
