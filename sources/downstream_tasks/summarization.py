@@ -50,6 +50,11 @@ def run_summarization(
                                        language=args.summarization_language,
                                        split=split)
         logger.info(f'The size of {split} set: {len(datasets[split])}')
+    if args.train_subset_ratio and 'train' in datasets:
+        datasets['train'] = datasets['train'].subset(args.train_subset_ratio)
+        logger.info(f'The train is trimmed to subset due to the argument: train_subset_ratio={args.train_subset_ratio}')
+        logger.info('The size of trimmed train set: {}'.format(datasets['train']))
+
     logger.info('Datasets loaded successfully')
 
     # --------------------------------------------------
