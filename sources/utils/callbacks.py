@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class LogStateCallBack(TrainerCallback):
 
     epoch_timer = Timer()
-    map_step_epoch = {}
+    map_step_epoch = {-1: -1}
 
     def on_epoch_begin(self,
                        args: TrainingArguments,
@@ -33,8 +33,9 @@ class LogStateCallBack(TrainerCallback):
                      control: TrainerControl,
                      optimizer: torch.optim.Optimizer,
                      **kwargs):
-        self.map_step_epoch[state.global_step] = state.epoch
-        logger.debug('Epoch {} / step {} finished, time: {:.2f}s'.format(state.epoch - 1,
+        epoch = state.epoch - 1
+        self.map_step_epoch[state.global_step] = epoch
+        logger.debug('Epoch {} / step {} finished, time: {:.2f}s'.format(epoch,
                                                                          state.global_step,
                                                                          self.epoch_timer.time()))
         logger.debug('learning rate: {}'.format(optimizer.param_groups[0]['lr']))
@@ -45,15 +46,16 @@ class LogStateCallBack(TrainerCallback):
                     control: TrainerControl,
                     metrics: Dict[str, float],
                     **kwargs):
-        logger.debug(f'Evaluation after epoch {state.epoch} finished')
+        epoch = metrics.pop('epoch') - 1
+        logger.debug(f'Evaluation after epoch {epoch} finished')
         for metric, score in metrics.items():
             logger.debug(f'{metric}: {score}')
         try:
             best_steps = int(state.best_model_checkpoint.split('-')[-1])
         except Exception:
             best_steps = -1
-        logger.debug(f'Best model at epoch {self.map_step_epoch[best_steps] if best_steps in self.map_step_epoch else -1} '
-                     f'/ step {best_steps}, scores: {state.best_metric}')
+        logger.info(f'Best model at epoch {self.map_step_epoch[best_steps]} / step {best_steps}, '
+                    f'scores: {state.best_metric}')
 
 
 class SearchValidCallBack(TrainerCallback):
