@@ -262,7 +262,7 @@ class CodeDataset(Dataset):
             Dataset: the subset
 
         """
-        assert 0 < ratio <= 1, f'The subset ratio supposes to be 0 < ratio <= 1, but got ratio={ratio}'
+        assert 0 < ratio <= 1, f'The subset ratio supposed to be 0 < ratio <= 1, but got ratio={ratio}'
         if ratio == 1:
             return self
         indices = random.sample(range(self.size), int(self.size * ratio))
