@@ -81,6 +81,11 @@ class DatasetArguments:
         metadata={'help': 'Ratio of train subset'}
     )
 
+    pre_train_subset_ratio: float = field(
+        default=None,
+        metadata={'help': 'Ratio of pre-train subset'}
+    )
+
 
 @dataclass
 class SavingArguments:
@@ -255,7 +260,7 @@ class TaskArguments:
     )
 
     summarization_language: str = field(
-        default='python',
+        default='java',
         metadata={'help': 'Language of the source code in code summarization, also the directory of the dataset dir'}
     )
 
@@ -277,7 +282,7 @@ class TaskArguments:
     )
 
     search_language: str = field(
-        default='ruby',
+        default='java',
         metadata={'help': 'Language of the source code in code search, also the directory of the dataset dir'}
     )
 
