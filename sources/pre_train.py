@@ -1,11 +1,13 @@
+import torch.utils.data
 from transformers import BartConfig, Seq2SeqTrainingArguments, IntervalStrategy, SchedulerType, TrainingArguments
 
 import logging
 import os
+from typing import Union, Tuple
 
 import enums
 from data.dataset import init_dataset
-from data.vocab import Vocab, init_vocab
+from data.vocab import Vocab, init_vocab, load_vocab
 from utils.general import count_params, human_format, layer_wise_parameters
 from utils.trainer import CodeTrainer, CodeCLSTrainer
 from utils.callbacks import LogStateCallBack
@@ -14,7 +16,9 @@ from models.bart import BartForClassificationAndGeneration
 logger = logging.getLogger(__name__)
 
 
-def pre_train(args, tasks=None):
+def pre_train(args,
+              tasks=None,
+              trained_vocab: Union[Tuple[Vocab, Vocab, Vocab], str] = None):
     if tasks is None:
         tasks = [enums.TASK_CODE_AST_PREDICTION, enums.TASK_MASS, enums.TASK_METHOD_NAME_PREDICTION]
 
@@ -28,41 +32,56 @@ def pre_train(args, tasks=None):
     logger.info('Loading and parsing datasets')
     dataset = init_dataset(args=args, mode=enums.TRAINING_MODE_PRE_TRAIN)
     logger.info(f'The size of pre_training set: {len(dataset)}')
+    if args.pre_train_subset_ratio:
+        dataset = dataset.subset(args.pre_train_subset_ratio)
+        logger.info(f'The pre-train dataset is trimmed to subset due to the argument: '
+                    f'train_subset_ratio={args.pre_train_subset_ratio}')
+        logger.info('The size of trimmed pre-train set: {}'.format(len(dataset)))
     logger.info('Datasets loaded and parsed successfully')
 
     # --------------------------------------------------
     # vocabs
     # --------------------------------------------------
     logger.info('-' * 100)
-    logger.info('Building vocabularies')
-    # code vocab
-    code_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
-                            name=args.code_vocab_name,
-                            method=args.code_tokenize_method,
-                            vocab_size=args.code_vocab_size,
-                            datasets=[dataset.codes],
-                            ignore_case=True,
-                            save_root=args.vocab_root)
+    if trained_vocab:
+        if isinstance(trained_vocab, tuple):
+            logger.info('Vocabularies are passed through parameter')
+            assert len(trained_vocab) == 3
+            code_vocab, ast_vocab, nl_vocab = trained_vocab
+        else:
+            logger.info('Loading vocabularies from files')
+            code_vocab = load_vocab(vocab_root=trained_vocab, name=args.code_vocab_name)
+            ast_vocab = load_vocab(vocab_root=trained_vocab, name=args.ast_vocab_name)
+            nl_vocab = load_vocab(vocab_root=trained_vocab, name=args.nl_vocab_name)
+    else:
+        logger.info('Building vocabularies')
+        # code vocab
+        code_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
+                                name=args.code_vocab_name,
+                                method=args.code_tokenize_method,
+                                vocab_size=args.code_vocab_size,
+                                datasets=[dataset.codes],
+                                ignore_case=True,
+                                save_root=args.vocab_root)
+        # nl vocab
+        nl_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
+                              name=args.nl_vocab_name,
+                              method=args.nl_tokenize_method,
+                              vocab_size=args.nl_vocab_size,
+                              datasets=[dataset.names, dataset.docs] if hasattr(dataset, 'docs') else [dataset.names],
+                              ignore_case=True,
+                              save_root=args.vocab_root,
+                              index_offset=len(code_vocab))
+        # ast vocab
+        ast_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
+                               name=args.ast_vocab_name,
+                               method='word',
+                               datasets=[dataset.asts],
+                               save_root=args.vocab_root,
+                               index_offset=len(code_vocab) + len(nl_vocab))
     logger.info(f'The size of code vocabulary: {len(code_vocab)}')
-    # nl vocab
-    nl_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
-                          name=args.nl_vocab_name,
-                          method=args.nl_tokenize_method,
-                          vocab_size=args.nl_vocab_size,
-                          datasets=[dataset.names, dataset.docs] if hasattr(dataset, 'docs') else [dataset.names],
-                          ignore_case=True,
-                          save_root=args.vocab_root,
-                          index_offset=len(code_vocab))
     logger.info(f'The size of nl vocabulary: {len(nl_vocab)}')
-    # ast vocab
-    ast_vocab = init_vocab(vocab_save_dir=args.vocab_save_dir,
-                           name=args.ast_vocab_name,
-                           method='word',
-                           datasets=[dataset.asts],
-                           save_root=args.vocab_root,
-                           index_offset=len(code_vocab) + len(nl_vocab))
     logger.info(f'The size of ast vocabulary: {len(ast_vocab)}')
-
     logger.info('Vocabularies built successfully')
 
     # --------------------------------------------------
@@ -106,7 +125,10 @@ def pre_train(args, tasks=None):
         logger.info('-' * 100)
         logger.info(f'Pre-training task: {task.upper()}')
 
-        dataset.set_task(task)
+        if isinstance(dataset, torch.utils.data.Subset):
+            dataset.dataset.set_task(task)
+        else:
+            dataset.set_task(task)
 
         if task == enums.TASK_CODE_AST_PREDICTION:
             # set model mode
@@ -133,6 +155,7 @@ def pre_train(args, tasks=None):
                                               logging_steps=args.tensor_board_logging_steps,
                                               save_strategy=IntervalStrategy.NO,
                                               seed=args.random_seed,
+                                              fp16=args.fp16,
                                               dataloader_drop_last=False,
                                               run_name=args.model_name,
                                               load_best_model_at_end=True,
@@ -189,6 +212,7 @@ def pre_train(args, tasks=None):
                                                      logging_steps=args.tensor_board_logging_steps,
                                                      save_strategy=IntervalStrategy.NO,
                                                      seed=args.random_seed,
+                                                     fp16=args.fp16,
                                                      dataloader_drop_last=False,
                                                      run_name=args.model_name,
                                                      load_best_model_at_end=True,
@@ -247,6 +271,7 @@ def pre_train(args, tasks=None):
                                                      logging_steps=args.tensor_board_logging_steps,
                                                      save_strategy=IntervalStrategy.NO,
                                                      seed=args.random_seed,
+                                                     fp16=args.fp16,
                                                      dataloader_drop_last=False,
                                                      run_name=args.model_name,
                                                      load_best_model_at_end=True,
