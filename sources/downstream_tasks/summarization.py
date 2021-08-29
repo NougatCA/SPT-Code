@@ -189,7 +189,7 @@ def run_summarization(
                                              prediction_loss_only=False,
                                              per_device_train_batch_size=args.batch_size,
                                              per_device_eval_batch_size=args.eval_batch_size,
-                                             gradient_accumulation_steps=1,
+                                             gradient_accumulation_steps=args.gradient_accumulation_steps,
                                              learning_rate=args.learning_rate,
                                              weight_decay=args.lr_decay_rate,
                                              max_grad_norm=args.grad_clipping_norm,
