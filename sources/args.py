@@ -9,15 +9,50 @@ import enums
 class RuntimeArguments:
     """Arguments for runtime."""
 
+    do_pre_train: bool = field(
+        default=False,
+        metadata={'action': 'store_true',
+                  'help': 'Whether to pre-train'}
+    )
+
+    pre_train_tasks: str = field(
+        default=','.join(enums.PRE_TRAIN_TASKS),
+        metadata={'help': 'Pre-training tasks in order, split by commas, '
+                          'for example (default) {}'.format(','.join(enums.PRE_TRAIN_TASKS))}
+    )
+
+    do_fine_tune: bool = field(
+        default=False,
+        metadata={'action': 'store_true',
+                  'help': 'Whether to fine_tune, task can be specific by `--task`'}
+    )
+
+    only_test: bool = field(
+        default=False,
+        metadata={'action': 'store_true',
+                  'help': 'Whether to test only'}
+    )
+
     task: str = field(
         default='summarization',
         metadata={'help': 'Downstream task',
-                  'choices': enums.ALL_DOWNSTREAM_TASK}
+                  'choices': enums.ALL_DOWNSTREAM_TASKS}
+    )
+
+    trained_vocab: str = field(
+        default='../pre_trained/vocabs/',
+        metadata={'help': 'Directory of trained vocabs'}
+    )
+
+    trained_model: str = field(
+        default='../pre_trained/models/all/',
+        metadata={'help': 'Directory of trained model'}
     )
 
     train_from_scratch: bool = field(
         default=False,
-        metadata={'help': 'Whether to train from scratch'}
+        metadata={'action': 'store_true',
+                  'help': 'Whether to train from scratch, will ignore `--trained_model`'}
     )
 
     random_seed: int = field(
@@ -28,11 +63,6 @@ class RuntimeArguments:
     n_epoch: int = field(
         default=50,
         metadata={'help': 'Number of data iterations for training'}
-    )
-
-    pre_train_n_epoch: int = field(
-        default=10,
-        metadata={'help': 'Number of data iterations for pre-training on each task'}
     )
 
     batch_size: int = field(
@@ -63,7 +93,8 @@ class RuntimeArguments:
 
     fp16: bool = field(
         default=False,
-        metadata={'help': 'Whether to use mixed precision'}
+        metadata={'action': 'store_true',
+                  'help': 'Whether to use mixed precision'}
     )
 
 
@@ -104,11 +135,6 @@ class SavingArguments:
     vocab_save_dir: str = field(
         default=os.path.join(DatasetArguments.dataset_root, 'vocab_saved'),
         metadata={'help': 'Directory to save and load vocab pickle instance'}
-    )
-
-    tensor_board_logging_steps: int = field(
-        default=500,
-        metadata={'help': 'Log to tensor board every this number of steps'}
     )
 
 
@@ -170,12 +196,14 @@ class PreprocessingArguments:
 
     no_ast: bool = field(
         default=False,
-        metadata={'help': 'Whether to eliminate AST from input'}
+        metadata={'action': 'store_true',
+                  'help': 'Whether to eliminate AST from input'}
     )
 
     no_nl: bool = field(
         default=False,
-        metadata={'help': 'Whether to eliminate natural language from input'}
+        metadata={'action': 'store_true',
+                  'help': 'Whether to eliminate natural language from input'}
     )
 
 
@@ -208,12 +236,6 @@ class ModelArguments:
         metadata={'help': 'Dropout probability'}
     )
 
-    activate_function: str = field(
-        default='gelu',
-        metadata={'help': 'Activate function of the model',
-                  'choices': ['gelu', 'relu', 'silu', 'gelu_new']}
-    )
-
 
 @dataclass
 class OptimizerArguments:
@@ -230,7 +252,7 @@ class OptimizerArguments:
     )
 
     early_stop_patience: int = field(
-        default=10,
+        default=20,
         metadata={'help': 'Stop training if performance does not improve in n epoch, 0 to disable'}
     )
 
@@ -242,6 +264,11 @@ class OptimizerArguments:
     grad_clipping_norm: float = field(
         default=1.0,
         metadata={'help': 'Gradient clipping norm, 0 to disable'}
+    )
+
+    gradient_accumulation_steps: int = field(
+        default=1,
+        metadata={'help': 'Gradient accumulation steps, default to 1'}
     )
 
     label_smoothing: float = field(
@@ -303,7 +330,12 @@ def add_args(parser):
                            PreprocessingArguments, ModelArguments, OptimizerArguments, TaskArguments]:
         group = parser.add_argument_group(data_container.__name__)
         for data_field in dataclasses.fields(data_container):
-            group.add_argument(transfer_arg_name(data_field.name),
-                               type=data_field.type,
-                               default=data_field.default,
-                               **data_field.metadata)
+            if 'action' in data_field.metadata:
+                group.add_argument(transfer_arg_name(data_field.name),
+                                   default=data_field.default,
+                                   **data_field.metadata)
+            else:
+                group.add_argument(transfer_arg_name(data_field.name),
+                                   type=data_field.type,
+                                   default=data_field.default,
+                                   **data_field.metadata)
