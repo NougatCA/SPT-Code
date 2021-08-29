@@ -17,10 +17,32 @@ logger = logging.getLogger(__name__)
 
 
 def pre_train(args,
-              tasks=None,
+              trained_model: Union[BartForClassificationAndGeneration, str] = None,
               trained_vocab: Union[Tuple[Vocab, Vocab, Vocab], str] = None):
+    tasks = args.pre_train_tasks
     if tasks is None:
-        tasks = [enums.TASK_CODE_AST_PREDICTION, enums.TASK_MASS, enums.TASK_METHOD_NAME_PREDICTION]
+        logger.warning('Was specified for pre-training, but got pre-training tasks to None, '
+                       'will default to {}'.format(','.join(enums.PRE_TRAIN_TASKS)))
+        tasks = enums.PRE_TRAIN_TASKS
+    else:
+        supported_tasks = []
+        for task in tasks.split(','):
+            task = task.strip().lower()
+            if task in enums.PRE_TRAIN_TASKS:
+                supported_tasks.append(task)
+            else:
+                logger.warning(f'Pre-training task {task} is not supported and will be ignored.')
+        tasks = supported_tasks
+
+    assert not trained_model or \
+        isinstance(trained_model, str) or \
+        isinstance(trained_model, BartForClassificationAndGeneration), \
+        f'The model type is not supported, expect Bart model or string of model dir, got {type(trained_model)}'
+
+    if trained_vocab is None and args.trained_vocab is not None:
+        trained_vocab = args.trained_vocab
+    assert not trained_vocab or isinstance(trained_vocab, str), \
+        f'The vocab type is not supported, expect string of vocab dir, got {type(trained_vocab)}'
 
     logger.info('*' * 100)
     logger.info('Initializing pre-training environments')
@@ -44,15 +66,10 @@ def pre_train(args,
     # --------------------------------------------------
     logger.info('-' * 100)
     if trained_vocab:
-        if isinstance(trained_vocab, tuple):
-            logger.info('Vocabularies are passed through parameter')
-            assert len(trained_vocab) == 3
-            code_vocab, ast_vocab, nl_vocab = trained_vocab
-        else:
-            logger.info('Loading vocabularies from files')
-            code_vocab = load_vocab(vocab_root=trained_vocab, name=args.code_vocab_name)
-            ast_vocab = load_vocab(vocab_root=trained_vocab, name=args.ast_vocab_name)
-            nl_vocab = load_vocab(vocab_root=trained_vocab, name=args.nl_vocab_name)
+        logger.info('Loading vocabularies from files')
+        code_vocab = load_vocab(vocab_root=trained_vocab, name=args.code_vocab_name)
+        ast_vocab = load_vocab(vocab_root=trained_vocab, name=args.ast_vocab_name)
+        nl_vocab = load_vocab(vocab_root=trained_vocab, name=args.nl_vocab_name)
     else:
         logger.info('Building vocabularies')
         # code vocab
@@ -147,12 +164,12 @@ def pre_train(args,
                                               learning_rate=args.learning_rate,
                                               weight_decay=args.lr_decay_rate,
                                               max_grad_norm=args.grad_clipping_norm,
-                                              num_train_epochs=2,
+                                              num_train_epochs=10,
                                               lr_scheduler_type=SchedulerType.LINEAR,
                                               warmup_steps=args.warmup_steps,
                                               logging_dir=os.path.join(args.tensor_board_root, task),
                                               logging_strategy=IntervalStrategy.STEPS,
-                                              logging_steps=args.tensor_board_logging_steps,
+                                              logging_steps=args.logging_steps,
                                               save_strategy=IntervalStrategy.NO,
                                               seed=args.random_seed,
                                               fp16=args.fp16,
@@ -204,12 +221,12 @@ def pre_train(args,
                                                      learning_rate=args.learning_rate,
                                                      weight_decay=args.lr_decay_rate,
                                                      max_grad_norm=args.grad_clipping_norm,
-                                                     num_train_epochs=10,
+                                                     num_train_epochs=30,
                                                      lr_scheduler_type=SchedulerType.LINEAR,
                                                      warmup_steps=args.warmup_steps,
                                                      logging_dir=os.path.join(args.tensor_board_root, task),
                                                      logging_strategy=IntervalStrategy.STEPS,
-                                                     logging_steps=args.tensor_board_logging_steps,
+                                                     logging_steps=args.logging_steps,
                                                      save_strategy=IntervalStrategy.NO,
                                                      seed=args.random_seed,
                                                      fp16=args.fp16,
@@ -263,12 +280,12 @@ def pre_train(args,
                                                      learning_rate=args.learning_rate,
                                                      weight_decay=args.lr_decay_rate,
                                                      max_grad_norm=args.grad_clipping_norm,
-                                                     num_train_epochs=10,
+                                                     num_train_epochs=30,
                                                      lr_scheduler_type=SchedulerType.LINEAR,
                                                      warmup_steps=args.warmup_steps,
                                                      logging_dir=os.path.join(args.tensor_board_root, task),
                                                      logging_strategy=IntervalStrategy.STEPS,
-                                                     logging_steps=args.tensor_board_logging_steps,
+                                                     logging_steps=args.logging_steps,
                                                      save_strategy=IntervalStrategy.NO,
                                                      seed=args.random_seed,
                                                      fp16=args.fp16,
