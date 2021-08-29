@@ -18,16 +18,26 @@ from data.dataset import save_all_datasets
 
 def main(args):
 
+    model = None
+    vocab = None
+    if args.do_pre_train:
+        model, vocab = pre_train(args=args)
+
+    if args.do_fine_tune or args.only_test:
+        train(args=args,
+              trained_model=model,
+              trained_vocab=vocab)
+
     # model, vocabs = pre_train(args, tasks=[enums.TASK_CODE_AST_PREDICTION, enums.TASK_METHOD_NAME_PREDICTION])
-    # model, vocabs = pre_train(args)
+    # model, vocabs = pre_train(args, trained_vocab='../pre_trained/vocabs/')
     # train(args, trained_model=model, trained_vocab=vocabs)
 
     # train(args, task=enums.TASK_CLONE_DETECTION)
 
-    train(args,
-          task=enums.TASK_COMPLETION,
-          trained_model='../pre_trained/models/all/' if not args.train_from_scratch else None,
-          trained_vocab='../pre_trained/vocabs/' if not args.train_from_scratch else None)
+    # train(args,
+    #       task=args.task,
+    #       trained_model='../pre_trained/models/all/' if not args.train_from_scratch else None,
+    #       trained_vocab='../pre_trained/vocabs/' if not args.train_from_scratch else None)
 
     # only init dataset and save
     # save_all_datasets(args)
