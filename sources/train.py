@@ -18,32 +18,38 @@ logger = logging.getLogger(__name__)
 
 def train(
         args,
-        task,
         trained_model: Union[BartForClassificationAndGeneration, str] = None,
-        trained_vocab: Union[Tuple[Vocab, Vocab, Vocab], str] = None,
-        only_test=False):
+        trained_vocab: Union[Tuple[Vocab, Vocab, Vocab], str] = None):
     """
     Fine-tuning from given pre-trained model and vocabs, or training from scratch.
 
     Args:
         args (argparse.Namespace): Arguments
-        task (str): Training/Fine-tuning task, support ['summarization', 'translation', 'search']
         trained_model (Union[BartForClassificationAndGeneration, str]): Optional,
             instance or directory of ``BartForClassificationAndGeneration``, must given when ``only_test`` is True
         trained_vocab (Union[Tuple[Vocab, Vocab, Vocab], str]): Optional, Tuple of instances or directory of three
             vocabularies, must given when ``only_test`` is True
-        only_test (bool): True when only need to test, default to False
 
     """
-    assert task in enums.ALL_DOWNSTREAM_TASK
-    assert not only_test or isinstance(trained_model, str) or \
+    task = args.task.lower()
+    assert task in enums.ALL_DOWNSTREAM_TASKS, f'Downstream task {task} is not supported.'
+
+    if args.train_from_scratch:
+        args.trained_model = None
+        args.trained_vocab = None
+        trained_model = None
+        trained_vocab = None
+
+    if trained_model is None and args.trained_model is not None:
+        trained_model = args.trained_model
+    assert not args.only_test or isinstance(trained_model, str) or \
            isinstance(trained_model, BartForClassificationAndGeneration), \
-           f'The model type is not supported, expect Bart model or string of path, got {type(trained_model)}'
-    assert not only_test or isinstance(trained_vocab, str) or isinstance(trained_vocab, tuple), \
+           f'The model type is not supported, expect Bart model or string of model dir, got {type(trained_model)}'
+
+    if trained_vocab is None and args.trained_vocab is not None:
+        trained_vocab = args.trained_vocab
+    assert not args.only_test or isinstance(trained_vocab, str) or isinstance(trained_vocab, tuple), \
         f'The vocab type is not supported, expect tuple or string of path, got {type(trained_vocab)}'
-    assert (trained_model is None and trained_vocab is None) or \
-           (trained_model is not None and trained_vocab is not None), \
-           'Parameters ``trained_model`` and ``trained_vocab`` must given or not given simultaneously'
 
     logger.info('*' * 100)
     if trained_model:
@@ -60,12 +66,12 @@ def train(
         run_summarization(args=args,
                           trained_model=trained_model,
                           trained_vocab=trained_vocab,
-                          only_test=only_test)
+                          only_test=args.only_test)
     elif task == enums.TASK_TRANSLATION:
         run_translation(args=args,
                         trained_model=trained_model,
                         trained_vocab=trained_vocab,
-                        only_test=only_test)
+                        only_test=args.only_test)
     elif task == enums.TASK_SEARCH:
         # run_search(args=args,
         #            trained_model=trained_model,
@@ -74,19 +80,19 @@ def train(
         run_search_no_trainer(args=args,
                               trained_model=trained_model,
                               trained_vocab=trained_vocab,
-                              only_test=only_test)
+                              only_test=args.only_test)
     elif task == enums.TASK_CLONE_DETECTION:
         run_clone_detection(args=args,
                             trained_model=trained_model,
                             trained_vocab=trained_vocab,
-                            only_test=only_test)
+                            only_test=args.only_test)
     elif task == enums.TASK_COMPLETION:
         run_completion(args=args,
                        trained_model=trained_model,
                        trained_vocab=trained_vocab,
-                       only_test=only_test)
+                       only_test=args.only_test)
     elif task == enums.TASK_BUG_FIX:
         run_bug_fix(args=args,
                     trained_model=trained_model,
                     trained_vocab=trained_vocab,
-                    only_test=only_test)
+                    only_test=args.only_test)
