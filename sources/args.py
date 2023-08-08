@@ -22,7 +22,7 @@ class RuntimeArguments:
     )
 
     do_fine_tune: bool = field(
-        default=False,
+        default=True,
         metadata={'action': 'store_true',
                   'help': 'Whether to fine_tune, task can be specific by `--task`'}
     )
@@ -34,7 +34,7 @@ class RuntimeArguments:
     )
 
     task: str = field(
-        default='summarization',
+        default='search',
         metadata={'help': 'Downstream task',
                   'choices': enums.ALL_DOWNSTREAM_TASKS}
     )
@@ -66,12 +66,12 @@ class RuntimeArguments:
     )
 
     batch_size: int = field(
-        default=64,
+        default=16,
         metadata={'help': 'Batch size for training on each device'}
     )
 
     eval_batch_size: int = field(
-        default=64,
+        default=16,
         metadata={'help': 'Batch size for evaluation on each device'}
     )
 
@@ -92,7 +92,7 @@ class RuntimeArguments:
     )
 
     fp16: bool = field(
-        default=False,
+        default=True,
         metadata={'action': 'store_true',
                   'help': 'Whether to use mixed precision'}
     )

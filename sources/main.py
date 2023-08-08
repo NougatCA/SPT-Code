@@ -12,8 +12,6 @@ from prettytable import PrettyTable
 from args import add_args
 from train import train
 from pre_train import pre_train
-import enums
-from data.dataset import save_all_datasets
 
 
 def main(args):
@@ -27,20 +25,6 @@ def main(args):
         train(args=args,
               trained_model=model,
               trained_vocab=vocab)
-
-    # model, vocabs = pre_train(args, tasks=[enums.TASK_CODE_AST_PREDICTION, enums.TASK_METHOD_NAME_PREDICTION])
-    # model, vocabs = pre_train(args, trained_vocab='../pre_trained/vocabs/')
-    # train(args, trained_model=model, trained_vocab=vocabs)
-
-    # train(args, task=enums.TASK_CLONE_DETECTION)
-
-    # train(args,
-    #       task=args.task,
-    #       trained_model='../pre_trained/models/all/' if not args.train_from_scratch else None,
-    #       trained_vocab='../pre_trained/vocabs/' if not args.train_from_scratch else None)
-
-    # only init dataset and save
-    # save_all_datasets(args)
 
 
 if __name__ == '__main__':

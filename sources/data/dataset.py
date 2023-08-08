@@ -174,35 +174,6 @@ class CodeDataset(Dataset):
             mask_tokens = code_tokens[mask_start: mask_start + mask_len]
             input_tokens = code_tokens[:mask_start] + [Vocab.MSK_TOKEN] + code_tokens[mask_start + mask_len:]
             return ' '.join(input_tokens), self.asts[index], self.names[index], ' '.join(mask_tokens)
-
-            # source = self.sources[index]
-            # code = self.codes[index]
-            # lang = self.languages[index]
-            #
-            # matches = re.finditer(r"\b\S", source)
-            # indices = [m.start(0) for m in matches]
-            # if len(indices) <= 2 * self.args.next_code_prediction_min_start_token:
-            #     indices = indices[len(indices) // 2:]
-            # else:
-            #     indices = indices[self.args.next_code_prediction_min_start_token:]
-            # while True:
-            #     index = random.sample(indices, 1)[0]
-            #     if index < self.args.max_code_len:
-            #         break
-            # former_source = source[:index]
-            #
-            # try:
-            #     former_code, latter_code = align_source_code(former_source=former_source, code=code)
-            # except Exception:
-            #     former_code = tokenize_source(former_source, lang=lang)
-            #     latter_code = regular_tokenize(source[index:])
-            #
-            # latter_code_tokens = latter_code.split(' ')
-            # if len(latter_code_tokens) > self.args.next_code_prediction_max_len:
-            #     latter_code_tokens = latter_code_tokens[:self.args.next_code_prediction_max_len]
-            #     latter_code = ' '.join(latter_code_tokens)
-            #
-            # return former_code, self.asts[index], self.names[index], latter_code
         # mnp
         elif self.task == enums.TASK_METHOD_NAME_PREDICTION:
             return self.codes_wo_name[index], self.asts[index], self.names_wo_name[index], self.names[index]
@@ -219,12 +190,13 @@ class CodeDataset(Dataset):
                 return self.split, self.urls[index], self.codes[index], self.asts[index], self.names[index]
             elif self.split == 'train':
                 pos_nl = self.nls[index]
-                while True:
-                    neg_index = random.randint(0, self.size - 1)
-                    neg_nl = self.nls[neg_index]
-                    if avg_bleu(references=[pos_nl.split()], candidates=[neg_nl.split()]) < 0.5:
-                        break
-                return self.split, self.codes[index], self.asts[index], self.names[index], pos_nl, neg_nl
+                # while True:
+                #     neg_index = random.randint(0, self.size - 1)
+                #     neg_nl = self.nls[neg_index]
+                #     if avg_bleu(references=[pos_nl.split()], candidates=[neg_nl.split()]) < 0.5:
+                #         break
+                # return self.split, self.codes[index], self.asts[index], self.names[index], pos_nl, neg_nl
+                return self.split, self.codes[index], self.asts[index], self.names[index], pos_nl
             else:
                 return self.split, self.urls[index], self.nls[index]
         # clone detection

@@ -712,6 +712,8 @@ def parse_for_search(dataset_dir, lang, split):
     names = []
     nls = []
 
+    print(f"Parsing {split} dataset")
+
     path = os.path.join(dataset_dir, f'{split}.jsonl')
     with open(path, encoding='utf-8') as f:
         logger.info(f'  File: {path}')

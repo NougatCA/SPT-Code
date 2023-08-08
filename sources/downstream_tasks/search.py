@@ -1,18 +1,24 @@
-from transformers import BartConfig, TrainingArguments, IntervalStrategy, SchedulerType
+import torch
+import torch.nn as nn
+from torch.optim import AdamW
+from transformers import BartConfig, get_scheduler, SchedulerType
 from torch.utils.data.dataloader import DataLoader
+from accelerate import Accelerator
 
 import logging
 from typing import Union, Tuple
 import os
+import math
+from tqdm import tqdm
+import numpy as np
 
 import enums
 from models.bart import BartForClassificationAndGeneration
 from data.vocab import Vocab, load_vocab, init_vocab
 from data.dataset import init_dataset
 from utils.general import count_params, human_format, layer_wise_parameters
-from utils.callbacks import LogStateCallBack, SearchValidCallBack
-from utils.trainer import CodeCLSTrainer
 from data.data_collator import collate_fn
+from utils.early_stopping import EarlyStopping
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +42,9 @@ def run_search(
     """
     logger.info('-' * 100)
     logger.info(f'Code search on language: {args.search_language}')
+    # accelerator
+    accelerator = Accelerator()
+    logger.info(accelerator.state)
     # --------------------------------------------------
     # datasets
     # --------------------------------------------------
@@ -139,8 +148,8 @@ def run_search(
                             min_length=1,
                             num_beams=args.beam_width,
                             num_labels=2)
-        model = BartForClassificationAndGeneration(config, mode=enums.MODEL_MODE_SEARCH)
-    model.set_model_mode(enums.MODEL_MODE_SEARCH)
+        model = BartForClassificationAndGeneration(config, mode=enums.MODEL_MODE_GEN)
+    model.set_model_mode(enums.MODEL_MODE_GEN)
     # log model statistic
     logger.info('Trainable parameters: {}'.format(human_format(count_params(model))))
     table = layer_wise_parameters(model)
@@ -153,7 +162,16 @@ def run_search(
     if not only_test:
         logger.info('-' * 100)
         logger.info('Initializing the running configurations')
-
+        gradient_accumulation_steps = 1
+        # dataloader
+        dataloader = DataLoader(dataset=datasets['train'],
+                                batch_size=args.batch_size,
+                                collate_fn=lambda batch: collate_fn(batch,
+                                                                    args=args,
+                                                                    task=enums.TASK_SEARCH,
+                                                                    code_vocab=code_vocab,
+                                                                    nl_vocab=nl_vocab,
+                                                                    ast_vocab=ast_vocab))
         valid_dataloader = DataLoader(dataset=datasets['valid'],
                                       batch_size=args.eval_batch_size,
                                       collate_fn=lambda batch: collate_fn(batch,
@@ -162,70 +180,150 @@ def run_search(
                                                                           code_vocab=code_vocab,
                                                                           nl_vocab=nl_vocab,
                                                                           ast_vocab=ast_vocab))
-        training_args = TrainingArguments(output_dir=os.path.join(args.checkpoint_root, enums.TASK_SEARCH),
-                                          overwrite_output_dir=True,
-                                          do_train=True,
-                                          do_eval=False,
-                                          do_predict=False,
-                                          evaluation_strategy=IntervalStrategy.NO,
-                                          prediction_loss_only=False,
-                                          per_device_train_batch_size=args.batch_size,
-                                          per_device_eval_batch_size=args.eval_batch_size,
-                                          gradient_accumulation_steps=args.gradient_accumulation_steps,
-                                          learning_rate=args.learning_rate,
-                                          weight_decay=args.lr_decay_rate,
-                                          max_grad_norm=args.grad_clipping_norm,
-                                          num_train_epochs=args.n_epoch,
-                                          lr_scheduler_type=SchedulerType.LINEAR,
-                                          warmup_steps=args.warmup_steps,
-                                          logging_dir=os.path.join(args.tensor_board_root, enums.TASK_SEARCH),
-                                          logging_strategy=IntervalStrategy.STEPS,
-                                          logging_steps=args.logging_steps,
-                                          save_strategy=IntervalStrategy.EPOCH,
-                                          save_total_limit=5,
-                                          seed=args.random_seed,
-                                          fp16=args.fp16,
-                                          dataloader_drop_last=False,
-                                          run_name=args.model_name,
-                                          load_best_model_at_end=True,
-                                          metric_for_best_model=None,
-                                          greater_is_better=None,
-                                          ignore_data_skip=False,
-                                          label_smoothing_factor=args.label_smoothing,
-                                          report_to=['tensorboard'],
-                                          dataloader_pin_memory=True)
-        trainer = CodeCLSTrainer(main_args=args,
-                                 code_vocab=code_vocab,
-                                 ast_vocab=ast_vocab,
-                                 nl_vocab=nl_vocab,
-                                 task=enums.TASK_SEARCH,
-                                 model=model,
-                                 args=training_args,
-                                 data_collator=None,
-                                 train_dataset=datasets['train'],
-                                 eval_dataset=None,
-                                 tokenizer=nl_vocab,
-                                 model_init=None,
-                                 compute_metrics=None,
-                                 callbacks=[
-                                     LogStateCallBack(),
-                                     SearchValidCallBack(codebase_dataloader=codebase_dataloader,
-                                                         eval_dataloader=valid_dataloader,
-                                                         early_stop_patience=args.early_stop_patience)])
+        # optimizer
+        no_decay = ["bias", "LayerNorm.weight"]
+        optimizer_grouped_parameters = [
+            {
+                "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+                "weight_decay": args.lr_decay_rate,
+            },
+            {
+                "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+                "weight_decay": 0.0,
+            },
+        ]
+        optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate)
+        # Prepare everything with `accelerator`
+        model, optimizer, dataloader, valid_dataloader, codebase_dataloader = accelerator.prepare(
+            model, optimizer, dataloader, valid_dataloader, codebase_dataloader
+        )
+        # Scheduler and math around the number of training steps.
+        num_update_steps_per_epoch = math.ceil(len(dataloader) / gradient_accumulation_steps)
+        max_train_steps = args.n_epoch * num_update_steps_per_epoch
+
+        lr_scheduler = get_scheduler(name=SchedulerType.LINEAR,
+                                     optimizer=optimizer,
+                                     num_warmup_steps=args.warmup_steps,
+                                     num_training_steps=max_train_steps)
+        # early stopping
+        early_stopping = EarlyStopping(patience=args.early_stop_patience, higher_better=True)
         logger.info('Running configurations initialized successfully')
+
+        # loss
+        loss_fct = torch.nn.CrossEntropyLoss()
 
         # --------------------------------------------------
         # train
         # --------------------------------------------------
         logger.info('-' * 100)
         logger.info('Start training')
-        train_result = trainer.train()
+
+        total_batch_size = args.batch_size * accelerator.num_processes * gradient_accumulation_steps
+
+        logger.info("***** Running training *****")
+        logger.info(f"  Num examples = {len(datasets['train'])}")
+        logger.info(f"  Num Epochs = {args.n_epoch}")
+        logger.info(f"  Instantaneous batch size per device = {args.batch_size}")
+        logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_batch_size}")
+        logger.info(f"  Gradient Accumulation steps = {gradient_accumulation_steps}")
+        logger.info(f"  Total optimization steps = {max_train_steps}")
+
+        progress_bar = tqdm(range(max_train_steps))
+        completed_steps = 0
+
+        for epoch in range(args.n_epoch):
+            model.train()
+            for step, batch in enumerate(dataloader):
+                code_hidden_states = model(
+                    input_ids=batch["input_ids"],
+                    attention_mask=batch["attention_mask"],
+                    labels=batch["input_ids"],
+                    decoder_attention_mask=batch["attention_mask"],
+                    return_dict=True,
+                    output_hidden_states=True
+                ).decoder_hidden_states[-1]
+
+                code_eos_mask = batch["input_ids"].eq(code_vocab.get_eos_index())
+                if len(torch.unique_consecutive(code_eos_mask.sum(1))) > 1:
+                    raise ValueError("All examples must have the same number of <eos> tokens.")
+                code_vec = code_hidden_states[code_eos_mask, :].view(
+                    code_hidden_states.size(0), -1, code_hidden_states.size(-1))[:, -1, :]
+                code_vec = torch.nn.functional.normalize(code_vec, p=2, dim=1)
+
+                nl_hidden_states = model(
+                    input_ids=batch["nl_input_ids"],
+                    attention_mask=batch["nl_attention_mask"],
+                    labels=batch["nl_input_ids"],
+                    decoder_attention_mask=batch["nl_attention_mask"],
+                    return_dict=True,
+                    output_hidden_states=True
+                ).decoder_hidden_states[-1]
+                nl_eos_mask = batch["nl_input_ids"].eq(nl_vocab.get_eos_index())
+                if len(torch.unique_consecutive(nl_eos_mask.sum(1))) > 1:
+                    raise ValueError("All examples must have the same number of <eos> tokens.")
+                nl_vec = nl_hidden_states[nl_eos_mask, :].view(
+                    nl_hidden_states.size(0), -1, nl_hidden_states.size(-1))[:, -1, :]
+                nl_vec = torch.nn.functional.normalize(nl_vec, p=2, dim=1)
+
+                # calculate scores and loss
+                scores = torch.einsum("ab,cb->ac", nl_vec, code_vec)
+                loss = loss_fct(scores * 20, torch.arange(batch["input_ids"].size(0), device=scores.device))
+
+                loss = loss / gradient_accumulation_steps
+                accelerator.backward(loss)
+
+                if step % args.logging_steps == 0 and step != 0:
+                    logger.info({
+                        "global_step": completed_steps,
+                        "epoch": completed_steps / num_update_steps_per_epoch,
+                        "loss": loss.item(),
+                    })
+
+                if step % gradient_accumulation_steps == 0 or step == len(dataloader) - 1:
+                    # Gradient clipping
+                    if args.grad_clipping_norm is not None and args.grad_clipping_norm > 0:
+
+                        if hasattr(optimizer, "clip_grad_norm"):
+                            # Some optimizers (like the sharded optimizer) have a specific way to do gradient clipping
+                            optimizer.clip_grad_norm(args.grad_clipping_norm)
+                        elif hasattr(model, "clip_grad_norm_"):
+                            # Some models (like FullyShardedDDP) have a specific way to do gradient clipping
+                            model.clip_grad_norm_(args.grad_clipping_norm)
+                        else:
+                            # Revert to normal clipping otherwise, handling Apex or full precision
+                            nn.utils.clip_grad_norm_(model.parameters(), args.grad_clipping_norm)
+
+                    optimizer.step()
+                    lr_scheduler.step()
+                    optimizer.zero_grad()
+                    progress_bar.update(1)
+                    completed_steps += 1
+
+                if completed_steps >= max_train_steps:
+                    break
+
+            model.eval()
+            logger.info("***** Running evaluation *****")
+            logger.info("  Num queries = %d", len(datasets['valid']))
+            logger.info("  Num codes = %d", len(datasets['codebase']))
+            logger.info("  Batch size = %d", args.eval_batch_size)
+            valid_result = run_eval(
+                args=args,
+                model=model,
+                query_dataloader=valid_dataloader,
+                codebase_dataloader=codebase_dataloader,
+                code_vocab=code_vocab,
+                nl_vocab=nl_vocab,
+                split="valid",
+                epoch=epoch
+            )
+            logger.info(valid_result)
+            mrr = valid_result['valid_mrr']
+            early_stopping(score=mrr, model=model.state_dict(), epoch=epoch)
+            if early_stopping.early_stop:
+                break
+
         logger.info('Training finished')
-        trainer.save_model(args.model_root)
-        trainer.save_state()
-        metrics = train_result.metrics
-        trainer.log_metrics(split='train', metrics=metrics)
-        trainer.save_metrics(split='train', metrics=metrics)
 
     # --------------------------------------------------
     # predict
@@ -240,35 +338,115 @@ def run_search(
                                                                      code_vocab=code_vocab,
                                                                      nl_vocab=nl_vocab,
                                                                      ast_vocab=ast_vocab))
-    predict_metrics = model.evaluate_search(query_dataloader=test_dataloader,
-                                            codebase_dataloader=codebase_dataloader,
-                                            metrics_prefix='test')
-    ranks = predict_metrics.pop('test_ranks')
-    ref_urls = predict_metrics.pop('test_ref_urls')
-    can_urls = predict_metrics.pop('test_can_urls')
-    can_sims = predict_metrics.pop('test_can_sims')
-    trainer.log_metrics(split='test', metrics=predict_metrics)
-    trainer.save_metrics(split='test', metrics=predict_metrics)
-    # save testing results
-    with open(os.path.join(args.output_root, f'{enums.TASK_SEARCH}_test_results.txt'),
-              mode='w', encoding='utf-8') as result_f, \
-            open(os.path.join(args.output_root, f'{enums.TASK_SEARCH}_test_refs.txt'),
-                 mode='w', encoding='utf-8') as refs_f, \
-            open(os.path.join(args.output_root, f'{enums.TASK_SEARCH}_test_cans.txt'),
-                 mode='w', encoding='utf-8') as cans_f:
-        sample_id = 0
-        for rank, ref_url, can_url, can_sim in zip(ranks, ref_urls, can_urls, can_sims):
-            result_f.write(f'sample {sample_id}:\n')
-            sample_id += 1
-            result_f.write(f'rank: {rank}\n')
-            result_f.write(f'reference_url: {ref_url}\n')
-            result_f.write(f'first_candidate_url: {can_url}\n')
-            result_f.write(f'first_candidate_similarity: {can_sim}\n')
-            result_f.write('\n')
-            refs_f.write(ref_url + '\n')
-            cans_f.write(can_url + '\n')
-        for name, score in predict_metrics.items():
-            result_f.write(f'{name}: {score}\n')
+    test_dataloader = accelerator.prepare(test_dataloader)
+    if not only_test:
+        model.load_state_dict(early_stopping.best_model)
+    model.eval()
+    logger.info("***** Running prediction *****")
+    logger.info("  Num queries = %d", len(datasets['test']))
+    logger.info("  Num codes = %d", len(datasets['codebase']))
+    logger.info("  Batch size = %d", args.eval_batch_size)
+    test_result = run_eval(
+        args=args,
+        model=model,
+        query_dataloader=test_dataloader,
+        codebase_dataloader=codebase_dataloader,
+        code_vocab=code_vocab,
+        nl_vocab=nl_vocab,
+        split="test"
+    )
+    logger.info(test_result)
     logger.info('Testing finished')
-    for name, score in predict_metrics.items():
-        logger.info(f'{name}: {score}')
+
+
+def run_eval(
+        args,
+        model,
+        query_dataloader,
+        codebase_dataloader,
+        code_vocab,
+        nl_vocab,
+        split,
+        epoch=None
+):
+    assert split in ["valid", "test"]
+    assert split == "test" or epoch is not None
+
+    code_vecs = []
+    nl_vecs = []
+
+    code_urls = []
+    nl_urls = []
+
+    model.eval()
+    for batch in tqdm(query_dataloader, desc="[1/3] Queries", ascii=True):
+        with torch.no_grad():
+            nl_hidden_states = model(
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+                labels=batch["input_ids"],
+                decoder_attention_mask=batch["attention_mask"],
+                return_dict=True,
+                output_hidden_states=True
+            ).decoder_hidden_states[-1]
+            nl_eos_mask = batch["input_ids"].eq(nl_vocab.get_eos_index())
+            if len(torch.unique_consecutive(nl_eos_mask.sum(1))) > 1:
+                raise ValueError("All examples must have the same number of <eos> tokens.")
+            nl_vec = nl_hidden_states[nl_eos_mask, :].view(
+                nl_hidden_states.size(0), -1, nl_hidden_states.size(-1))[:, -1, :]
+            nl_vec = torch.nn.functional.normalize(nl_vec, p=2, dim=1)
+        nl_vecs.extend(nl_vec.cpu().numpy())
+        nl_urls.extend(batch["urls"])
+
+    for batch in tqdm(codebase_dataloader, desc="[2/3] Codes", ascii=True):
+        with torch.no_grad():
+            code_hidden_states = model(
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+                labels=batch["input_ids"],
+                decoder_attention_mask=batch["attention_mask"],
+                return_dict=True,
+                output_hidden_states=True
+            ).decoder_hidden_states[-1]
+
+            code_eos_mask = batch["input_ids"].eq(code_vocab.get_eos_index())
+            if len(torch.unique_consecutive(code_eos_mask.sum(1))) > 1:
+                raise ValueError("All examples must have the same number of <eos> tokens.")
+            code_vec = code_hidden_states[code_eos_mask, :].view(
+                code_hidden_states.size(0), -1, code_hidden_states.size(-1))[:, -1, :]
+            code_vec = torch.nn.functional.normalize(code_vec, p=2, dim=1)
+        code_vecs.extend(code_vec.cpu().numpy())
+        code_urls.extend(batch["urls"])
+
+    code_vecs = np.array(code_vecs)
+    nl_vecs = np.array(nl_vecs)
+
+    scores = np.matmul(nl_vecs, code_vecs.T)
+    sort_ids = np.argsort(scores, axis=-1, kind='quicksort', order=None)[:, ::-1]
+
+    ranks = []
+    for url, sort_id in tqdm(zip(nl_urls, sort_ids), desc="[3/3] Computing MRR", ascii=True):
+        rank = 0
+        find = False
+        for idx in sort_id[:1000]:
+            if find is False:
+                rank += 1
+            if code_urls[idx] == url:
+                find = True
+        if find:
+            ranks.append(1 / rank)
+        else:
+            ranks.append(0)
+
+    result = {
+        f"{split}_mrr": float(np.mean(ranks)),
+        f"{split}_num_queries": len(nl_vecs),
+        f"{split}_num_codes": len(code_vecs),
+    }
+
+    model.train()
+
+    return result
+
+
+

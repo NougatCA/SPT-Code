@@ -189,7 +189,7 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
             model_inputs['urls'] = url_raw
 
         elif split == 'train':
-            code_raw, ast_raw, name_raw, nl_raw, neg_nl_raw = batch_raw
+            code_raw, ast_raw, name_raw, nl_raw = batch_raw
 
             model_inputs['input_ids'], model_inputs['attention_mask'] = get_concat_batch_inputs(
                 code_raw=code_raw,
@@ -205,19 +205,19 @@ def collate_fn(batch, args, task, code_vocab, nl_vocab, ast_vocab):
                 no_nl=args.no_nl
             )
 
-            model_inputs['decoder_input_ids'], model_inputs['decoder_attention_mask'] = get_batch_inputs(
+            model_inputs['nl_input_ids'], model_inputs['nl_attention_mask'] = get_batch_inputs(
                 batch=nl_raw,
                 vocab=nl_vocab,
                 processor=Vocab.eos_processor,
                 max_len=args.max_nl_len
             )
-            # neg_nl_input_ids, neg_nl_attention_mask
-            model_inputs['neg_nl_input_ids'], model_inputs['neg_nl_attention_mask'] = get_batch_inputs(
-                batch=neg_nl_raw,
-                vocab=nl_vocab,
-                processor=Vocab.eos_processor,
-                max_len=args.max_nl_len
-            )
+            # # neg_nl_input_ids, neg_nl_attention_mask
+            # model_inputs['neg_nl_input_ids'], model_inputs['neg_nl_attention_mask'] = get_batch_inputs(
+            #     batch=neg_nl_raw,
+            #     vocab=nl_vocab,
+            #     processor=Vocab.eos_processor,
+            #     max_len=args.max_nl_len
+            # )
 
         else:
             url_raw, nl_raw = batch_raw
