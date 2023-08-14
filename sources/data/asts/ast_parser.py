@@ -12,7 +12,8 @@ LANGUAGE = {enums.LANG_GO: Language('data/asts/build/my-languages.so', 'go'),
             enums.LANG_JAVA: Language('data/asts/build/my-languages.so', 'java'),
             enums.LANG_PHP: Language('data/asts/build/my-languages.so', 'php'),
             enums.LANG_RUBY: Language('data/asts/build/my-languages.so', 'ruby'),
-            enums.LANG_C_SHARP: Language('data/asts/build/my-languages.so', 'c_sharp')}
+            enums.LANG_C_SHARP: Language('data/asts/build/my-languages.so', 'c_sharp'),
+            enums.LANG_C: Language('data/asts/build/my-languages.so', 'c')}
 
 # LANGUAGE = {enums.LANG_GO: Language('build/my-languages.so', 'go'),
 #             enums.LANG_JAVASCRIPT: Language('build/my-languages.so', 'javascript'),
@@ -120,6 +121,16 @@ PATTERNS_METHOD_NAME = {
             name: (name) @method_name
         )
     )
+    """,
+
+    enums.LANG_C: """
+    (translation_unit
+        (function_definition
+            declarator: (
+                            function_declarator declarator: (identifier) @method_name
+                        )
+        )
+    )
     """
 }
 
@@ -192,6 +203,19 @@ PATTERNS_METHOD_INVOCATION = {
             )
         )
     ]
+    """,
+
+    # TODO: Not sure how correct is this. Not sure what is
+    # the intention of these patterns either.
+    enums.LANG_C: """
+    [
+        (call_expression
+            function: (identifier) @method_invocation
+        )
+        (call_expression
+            function: (field_expression) @method_invocation
+        )
+    ]
     """
 }
 
@@ -202,7 +226,8 @@ STATEMENT_ENDING_STRINGS = {
     enums.LANG_JAVASCRIPT: ['statement', 'expression'],
     enums.LANG_RUBY: ['call', 'assignment', 'if', 'unless_modifier', 'operator_assignment', 'if_modifier', 'return',
                       'rescue', 'else', 'unless', 'when', 'for', 'while_modifier', 'until'],
-    enums.LANG_PHP: ['statement', 'expression']
+    enums.LANG_PHP: ['statement', 'expression'],
+    enums.LANG_C: ['statement', 'expression', 'declarator']
 }
 
 

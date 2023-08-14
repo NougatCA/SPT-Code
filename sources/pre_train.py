@@ -65,6 +65,8 @@ def pre_train(args,
     # vocabs
     # --------------------------------------------------
     logger.info('-' * 100)
+    # TODO(nhasabni): temporary assignment to disabling loading vocabs. Remove later.
+    trained_vocab = None
     if trained_vocab:
         logger.info('Loading vocabularies from files')
         code_vocab = load_vocab(vocab_root=trained_vocab, name=args.code_vocab_name)

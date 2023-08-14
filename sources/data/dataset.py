@@ -268,9 +268,10 @@ class CodeDataset(Dataset):
         indices = random.sample(range(self.size), int(self.size * ratio))
         return torch.utils.data.Subset(self, indices)
 
-
+# TODO(nhasabni): load_if_saved is temporarily set to False to disable loading from disk.
+# Set it to True later.
 def init_dataset(args, mode, task=None, language=None, split=None, clone_mapping=None,
-                 load_if_saved=True) -> CodeDataset:
+                 load_if_saved=False) -> CodeDataset:
     """
     Find dataset, if the dataset is saved, load and return, else initialize and return.
 

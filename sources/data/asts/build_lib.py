@@ -4,8 +4,8 @@ from tree_sitter import Language
 import subprocess
 import os
 
-# for lang in ['go', 'javascript', 'python', 'java', 'php', 'ruby', 'c-sharp']:
-#     subprocess.run(['git', 'clone', f'git@github.com:tree-sitter/tree-sitter-{lang}.git',
+#for lang in ['go', 'javascript', 'python', 'java', 'php', 'ruby', 'c-sharp', 'c', 'cpp']:
+#    subprocess.run(['git', 'clone', f'git@github.com:tree-sitter/tree-sitter-{lang}.git',
 #                     f'vendor/tree-sitter-{lang}'])
 
 Language.build_library(
@@ -20,6 +20,8 @@ Language.build_library(
         'vendor/tree-sitter-java',
         'vendor/tree-sitter-php',
         'vendor/tree-sitter-ruby',
-        'vendor/tree-sitter-c-sharp'
+        'vendor/tree-sitter-c-sharp',
+        'vendor/tree-sitter-c',
+        'vendor/tree-sitter-cpp'
     ]
 )

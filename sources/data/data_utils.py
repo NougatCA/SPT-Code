@@ -17,6 +17,8 @@ from data.antlr_parsers.python3.Python3Lexer import Python3Lexer
 from data.antlr_parsers.php.PhpLexer import PhpLexer
 from data.antlr_parsers.javascript.JavaScriptLexer import JavaScriptLexer
 from data.code_tokenizers.ruby.ruby_tokenizer import RubyTokenizer
+#from data.code_tokenizers.c.c_tokenizer import Tokompiler_CLexer
+from data.code_tokenizers.c.c_lexer import PyCParser_CLexer
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +31,8 @@ MAPPING_LANG_LEXER = {
     enums.LANG_PYTHON: Python3Lexer,
     enums.LANG_PHP: PhpLexer,
     enums.LANG_JAVASCRIPT: JavaScriptLexer,
-    enums.LANG_RUBY: RubyTokenizer()
+    enums.LANG_RUBY: RubyTokenizer(),
+    enums.LANG_C: PyCParser_CLexer()
 }
 
 
@@ -240,6 +243,53 @@ def parse_json_file(file, lang):
 
     return sources, codes, names, codes_wo_name, docs
 
+def parse_hpcorpus_json_file(file, lang):
+    """
+    Parse a dataset file where each line is a json string representing a sample.
+
+    Args:
+        file (str): The file path
+        lang (str): Source code language
+
+    Returns:
+        (list[str], list[str], list[str], list[str], List[str]):
+            - List of source codes
+            - List of tokenized codes
+            - List of split method names
+            - List of tokenized codes with method name replaced with ``f``
+            - List of docstring strings, not every sample has it
+
+    """
+    sources = []
+    codes = []
+    names = []
+    codes_wo_name = []
+    docs = []
+    with open(file, encoding='utf-8') as f:
+        for line in f.readlines():
+            data = json.loads(line.strip())
+            name = trim_method_name(data['function'])
+            source = data['code'].strip()
+            source = remove_comments_and_docstrings(source, lang)
+            source = replace_string_literal(source)
+            data['code_tokens'] = tokenize_source(source, lang=lang, use_regular=False)
+            code = replace_string_literal(' '.join(data['code_tokens']))
+
+            sources.append(source)
+            codes.append(code)
+
+            code_wo_name = code.replace(name, 'f', 1)
+            codes_wo_name.append(code_wo_name)
+
+            name = ' '.join(split_identifier(name))
+            names.append(name)
+
+            if 'docstring' in data:
+                doc = clean_doc(data['docstring'])
+                if doc:
+                    docs.append(doc)
+
+    return sources, codes, names, codes_wo_name, docs
 
 def iter_all_files(base):
     """
@@ -275,7 +325,7 @@ def iter_pre_train_dataset_files(lang_dir, lang):
     # if lang in [enums.LANG_PYTHON]:
     #     return [file for file in iter_all_files(base=lang_dir) if file.endswith('.jsonl')]
     if lang in [enums.LANG_GO, enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_JAVASCRIPT, enums.LANG_PHP,
-                enums.LANG_RUBY]:
+                enums.LANG_RUBY, enums.LANG_C]:
         return [file for file in iter_all_files(base=lang_dir) if file.endswith('.jsonl')]
     return []
 
@@ -300,6 +350,9 @@ def load_pre_train_dataset(file, lang):
     if lang in [enums.LANG_JAVA, enums.LANG_PYTHON, enums.LANG_GO,
                 enums.LANG_JAVASCRIPT, enums.LANG_PHP, enums.LANG_RUBY]:
         sources, codes, names, codes_wo_name, docs = parse_json_file(file, lang=lang)
+        return sources, codes, names, codes_wo_name, docs
+    if lang in [enums.LANG_C]:
+        sources, codes, names, codes_wo_name, docs = parse_hpcorpus_json_file(file, lang=lang)
         return sources, codes, names, codes_wo_name, docs
 
 
@@ -349,7 +402,6 @@ def load_dataset_from_dir(dataset_dir):
             for dataset_file_path in dataset_files:
                 sources, codes, names, codes_wo_name, docs = load_pre_train_dataset(file=dataset_file_path,
                                                                                     lang=lang)
-
                 new_sources = []
                 new_codes = []
                 new_codes_wo_name = []
@@ -373,7 +425,8 @@ def load_dataset_from_dir(dataset_dir):
                         new_names_wo_name.append(nl_wo_name)
                         asts.append(ast)
                         only_names.append(name)
-                    except Exception:
+                    except Exception as e:
+                        print(f'Exception for {source} {e}')
                         continue
 
                 all_sources += new_sources
@@ -457,6 +510,12 @@ def tokenize_source(source, lang, use_regular=False):
     elif lang == enums.LANG_RUBY:
         tokens = MAPPING_LANG_LEXER[lang].get_pure_tokens(source)
         code = replace_string_literal(' '.join([token[0] for token in tokens]))
+        return trim_spaces(code)
+    elif lang == enums.LANG_C:
+        tokens = MAPPING_LANG_LEXER[lang].get_tokens(source)
+        code = replace_string_literal(' '.join(tokens))
+        # Use code below for Tokompiler
+        #code = replace_string_literal(MAPPING_LANG_LEXER[lang].lexicalize(source))
         return trim_spaces(code)
     else:
         # TODO: c# tokenize
