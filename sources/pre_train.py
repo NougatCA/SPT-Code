@@ -12,6 +12,7 @@ from utils.general import count_params, human_format, layer_wise_parameters
 from utils.trainer import CodeTrainer, CodeCLSTrainer
 from utils.callbacks import LogStateCallBack
 from models.bart import BartForClassificationAndGeneration
+from data.data_collator import collate_fn
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 def pre_train(args,
               trained_model: Union[BartForClassificationAndGeneration, str] = None,
               trained_vocab: Union[Tuple[Vocab, Vocab, Vocab], str] = None):
+    print("SPT-Code:pre_train:args", args)
     tasks = args.pre_train_tasks
     if tasks is None:
         logger.warning('Was specified for pre-training, but got pre-training tasks to None, '
@@ -181,7 +183,10 @@ def pre_train(args,
                                               ignore_data_skip=False,
                                               label_smoothing_factor=args.label_smoothing,
                                               report_to=['tensorboard'],
-                                              dataloader_pin_memory=True)
+                                              dataloader_pin_memory=True,
+                                              use_ipex=args.use_ipex,
+                                              log_level='debug',
+                                              ddp_backend='ccl' if args.do_dist_cpu_training else None)
             trainer = CodeCLSTrainer(main_args=args,
                                      code_vocab=code_vocab,
                                      ast_vocab=ast_vocab,
@@ -189,7 +194,12 @@ def pre_train(args,
                                      task=task,
                                      model=model,
                                      args=training_args,
-                                     data_collator=None,
+                                     data_collator=lambda batch: collate_fn(batch,
+                                                                            args=args,
+                                                                            task=task,
+                                                                            code_vocab=code_vocab,
+                                                                            nl_vocab=nl_vocab,
+                                                                            ast_vocab=ast_vocab),
                                      train_dataset=dataset,
                                      tokenizer=nl_vocab,
                                      model_init=None,
@@ -238,7 +248,10 @@ def pre_train(args,
                                                      ignore_data_skip=False,
                                                      label_smoothing_factor=args.label_smoothing,
                                                      report_to=['tensorboard'],
-                                                     dataloader_pin_memory=True)
+                                                     dataloader_pin_memory=True,
+                                                     use_ipex=args.use_ipex,
+                                                     log_level='debug',
+                                                     ddp_backend='ccl' if args.do_dist_cpu_training else None)
             trainer = CodeTrainer(main_args=args,
                                   code_vocab=code_vocab,
                                   ast_vocab=ast_vocab,
@@ -246,7 +259,12 @@ def pre_train(args,
                                   task=task,
                                   model=model,
                                   args=training_args,
-                                  data_collator=None,
+                                  data_collator=lambda batch: collate_fn(batch,
+                                                                            args=args,
+                                                                            task=task,
+                                                                            code_vocab=code_vocab,
+                                                                            nl_vocab=nl_vocab,
+                                                                            ast_vocab=ast_vocab),
                                   train_dataset=dataset,
                                   tokenizer=nl_vocab,
                                   model_init=None,
@@ -297,7 +315,10 @@ def pre_train(args,
                                                      ignore_data_skip=False,
                                                      label_smoothing_factor=args.label_smoothing,
                                                      report_to=['tensorboard'],
-                                                     dataloader_pin_memory=True)
+                                                     dataloader_pin_memory=True,
+                                                     use_ipex=args.use_ipex,
+                                                     log_level='debug',
+                                                     ddp_backend='ccl' if args.do_dist_cpu_training else None)
             trainer = CodeTrainer(main_args=args,
                                   code_vocab=code_vocab,
                                   ast_vocab=ast_vocab,
@@ -305,7 +326,12 @@ def pre_train(args,
                                   task=task,
                                   model=model,
                                   args=training_args,
-                                  data_collator=None,
+                                  data_collator=lambda batch: collate_fn(batch,
+                                                                            args=args,
+                                                                            task=task,
+                                                                            code_vocab=code_vocab,
+                                                                            nl_vocab=nl_vocab,
+                                                                            ast_vocab=ast_vocab),
                                   train_dataset=dataset,
                                   tokenizer=nl_vocab,
                                   model_init=None,

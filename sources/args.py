@@ -97,6 +97,16 @@ class RuntimeArguments:
                   'help': 'Whether to use mixed precision'}
     )
 
+    use_ipex: bool = field(
+        default=False,
+        metadata={'help': 'Enable Intel Python extension for acceleration on Intel Xeon CPUs'}
+    )
+
+    do_dist_cpu_training: bool = field(
+        default=False,
+        metadata={'help': 'Enable distributed training over multiple CPUs using Accelerate and Intel IPEX and OneCCL'}
+    )
+
 
 @dataclass
 class DatasetArguments:

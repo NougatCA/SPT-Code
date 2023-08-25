@@ -71,7 +71,7 @@ if __name__ == '__main__':
     for d in [main_args.checkpoint_root, main_args.model_root, main_args.vocab_root, main_args.tensor_board_root,
               main_args.dataset_save_dir, main_args.vocab_save_dir]:
         if not os.path.exists(d):
-            os.makedirs(d)
+            os.makedirs(d, exist_ok=True)
 
     # cuda and parallel
     if main_args.cuda_visible_devices is not None:

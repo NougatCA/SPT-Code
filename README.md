@@ -85,3 +85,48 @@ python main.py \
 --trained_vocab '../pre_trained/vocabs/' \
 --trained_model '../outputs/translation_java_c_sharp_20210826_052653/models/'
 ```
+
+## Distributed training
+
+### Installation
+
+Distributed training for SPT-Code requires Hugging Face's [`accelerate`](https://huggingface.co/docs/accelerate/index) package.
+Also, for distributed CPU training, we need `ipex` and Intel OneCCL. In
+addition, it requires MPI installation.
+
+```
+pip install accelerate
+```
+
+Refer to [this
+link](https://huggingface.co/docs/transformers/perf_train_cpu_many#usage-in-trainer) for `ipex` and OneCCL installation.
+
+### Command for training
+
+For a 4-node distributed training, we first need to create a `hostfile` that
+lists IPs of all 4 nodes, with one node per line.
+
+```
+x.x.x.x # node1
+y.y.y.y # node2
+z.z.z.z # node3
+w.w.w.w # node4
+```
+
+Then we need to run `accelerate config` to setup a config file for accelerate.
+Refer to [this
+link](https://huggingface.co/docs/accelerate/basic_tutorials/install#configuring-accelerate). Say Yes to IPEX, distributed training, and CPU.
+
+With this setup, following command starts 4 node distributed CPU training with
+oneCCL backend. Each node run 1 process.
+
+```
+$ cd sources
+$ mpirun -launcher ssh -verbose -genv I_MPI_DEBUG 4 -genv OMP_NUM_THREADS 112 -f <hostfile> \
+-n 4 -ppn 1 accelerate launch --config_file <accelerate_config_file> \
+main.py --do-pre-train --pre-train-tasks cap,mass,mng --batch-size 64 \
+--eval-batch-size 64 --model-name pre_train_distcpu_4node_c_small
+--logging-steps=10 --do-dist-cpu-training=True --use-ipex=True \
+--dataset-root=<dataset>
+```
+

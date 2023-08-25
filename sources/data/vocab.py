@@ -309,7 +309,7 @@ class Vocab(object):
         vocab_name = name if name else self.name
         vocab_dir = os.path.join(vocab_root, vocab_name)
         if not os.path.exists(vocab_dir) or not os.path.isdir(vocab_dir):
-            os.makedirs(vocab_dir)
+            os.makedirs(vocab_dir, exist_ok=True)
 
         # save pickle file for whole instance
         with open(os.path.join(vocab_dir, '{}.pk'.format(vocab_name)), mode='wb') as f:
