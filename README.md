@@ -8,13 +8,13 @@ The list of minimize requirements can be found in `requirements.txt`.
 
 ### Additional requirements
 
-If you need to reprocess the raw dataset, or use your own dataset,
-then you will also need to install the following packages.
+If you need to reprocess the raw dataset or use your own dataset,
+you will also need to install the following packages.
 ```
 tree_sitter==0.19.0
 antlr4-python3-runtime==4.9.2
 ```
-Besides, `antlr4` need to be installed,
+Besides, `antlr4` needs to be installed,
 [installation guidance here](https://github.com/antlr/antlr4/blob/master/doc/getting-started.md).
 
 If you encounter errors about `my-languages.so` when preprocessing the dataset, 
@@ -36,19 +36,19 @@ The dataset loading code is located in the `sources/data/data.py` and `sources/d
 
 ##  Pre-trained Tokenizers and Models
 
-Custom tokenizers (we call "vocab") can be downloaded here: ([OneDrive](https://1drv.ms/u/s!Aj4XBdlu8BS0geoV78e2KLC41sfasw?e=kfukTw), [iCloud](https://www.icloud.com.cn/iclouddrive/033gKQZigREGSYzRef-2yP6Bg#pre%5Ftrained), [Google Drive](https://drive.google.com/file/d/1PhVf5u8_uq5Tsl-OIvOGpqjA2y7D-9Dr/view?usp=sharing)). Extract it in a certain directory. 
+Custom tokenizers (we call "vocab") can be downloaded here: ([OneDrive](https://1drv.ms/u/s!Aj4XBdlu8BS0geoV78e2KLC41sfasw?e=kfukTw), [iCloud](https://www.icloud.com.cn/iclouddrive/033gKQZigREGSYzRef-2yP6Bg#pre%5Ftrained), [Google Drive](https://drive.google.com/file/d/1PhVf5u8_uq5Tsl-OIvOGpqjA2y7D-9Dr/view?usp=sharing)). Extract it to a certain directory. 
 Specific the argument `trained_vocab` of `main.py` 
 where the tokenizers are located or put it in `{dataset_root}/vocab_saved` (default to`.../dataset/vocab_saved`).
 
 You may pre-train SPT-Code by yourself. We also provide pre-trained models available [here](https://1drv.ms/u/s!Aj4XBdlu8BS0geoV78e2KLC41sfasw?e=kfukTw).
-Extract and put it in a directory, then specific the argument `trained_model` like tokenizers before.
+Extract and place it in a directory, then specify the argument `trained_model` as you did with tokenizers before.
 
 ## Runs
 
-Run `main.py` to start pre-train, fine-tune or test. 
-All arguments are located in `args.py`, specific whatever you need.
+Run `main.py` to start pre-training, fine-tune, or test. 
+All arguments are located in `args.py`, so you can specify whatever you need.
 
-Some example scripts are as following.
+Some example scripts are as follows.
 ```shell
 # pre-training
 python main.py \
